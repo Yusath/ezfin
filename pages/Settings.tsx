@@ -21,6 +21,40 @@ interface SettingsProps {
 type ExportPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
 type SettingsSection = 'google' | 'preferences' | 'categories' | 'security' | null;
 
+// --- EXTRACTED COMPONENT TO PREVENT RE-RENDERS ---
+// This component must be defined OUTSIDE the main Settings component
+const AccordionItem = ({ title, icon: Icon, subtext, isOpen, onToggle, children }: any) => {
+  return (
+    <div className={`bg-white dark:bg-[#1C1C1E] rounded-[1.5rem] overflow-hidden transition-all duration-300 border border-gray-100 dark:border-white/5 ${isOpen ? 'shadow-lg ring-1 ring-black/5 dark:ring-white/10' : 'shadow-sm'}`}>
+      <button 
+        onClick={onToggle}
+        className="w-full flex items-center justify-between p-5 ios-touch-target"
+      >
+        <div className="flex items-center gap-4">
+          <div className={`p-3 rounded-2xl transition-colors duration-300 ${isOpen ? 'bg-primary text-white' : 'bg-gray-50 dark:bg-white/10 text-gray-500 dark:text-gray-400'}`}>
+            <Icon size={22} strokeWidth={2.5} />
+          </div>
+          <div className="text-left">
+            <h3 className="font-bold text-base text-gray-900 dark:text-white tracking-tight">{title}</h3>
+            {!isOpen && subtext && <p className="text-xs text-gray-400 mt-0.5 font-medium">{subtext}</p>}
+          </div>
+        </div>
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${isOpen ? 'bg-gray-100 dark:bg-white/10 rotate-180 text-primary' : 'text-gray-300 dark:text-gray-600'}`}>
+           <ChevronDown size={18} strokeWidth={3} />
+        </div>
+      </button>
+      
+      {/* Animated Height Container */}
+      {isOpen && (
+        <div className="px-5 pb-6 pt-0 animate-accordion-down origin-top">
+          <div className="h-px w-full bg-gray-100 dark:bg-white/5 mb-6"></div>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Settings: React.FC<SettingsProps> = ({ 
   user, categories, darkMode, toggleTheme, onAddCategory, onDeleteCategory, updateUser, onImportTransactions, addToast
 }) => {
@@ -256,40 +290,6 @@ const Settings: React.FC<SettingsProps> = ({
     addToast("Google Account Disconnected", "info");
   };
 
-  // --- UI HELPER FOR ACCORDION ---
-  const AccordionItem = ({ id, title, icon: Icon, subtext, children }: any) => {
-    const isOpen = openSection === id;
-    return (
-      <div className={`bg-white dark:bg-[#1C1C1E] rounded-[1.5rem] overflow-hidden transition-all duration-300 border border-gray-100 dark:border-white/5 ${isOpen ? 'shadow-lg ring-1 ring-black/5 dark:ring-white/10' : 'shadow-sm'}`}>
-        <button 
-          onClick={() => toggleSection(id)}
-          className="w-full flex items-center justify-between p-5 ios-touch-target"
-        >
-          <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-2xl transition-colors duration-300 ${isOpen ? 'bg-primary text-white' : 'bg-gray-50 dark:bg-white/10 text-gray-500 dark:text-gray-400'}`}>
-              <Icon size={22} strokeWidth={2.5} />
-            </div>
-            <div className="text-left">
-              <h3 className="font-bold text-base text-gray-900 dark:text-white tracking-tight">{title}</h3>
-              {!isOpen && subtext && <p className="text-xs text-gray-400 mt-0.5 font-medium">{subtext}</p>}
-            </div>
-          </div>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${isOpen ? 'bg-gray-100 dark:bg-white/10 rotate-180 text-primary' : 'text-gray-300 dark:text-gray-600'}`}>
-             <ChevronDown size={18} strokeWidth={3} />
-          </div>
-        </button>
-        
-        {/* Animated Height Container */}
-        {isOpen && (
-          <div className="px-5 pb-6 pt-0 animate-accordion-down origin-top">
-            <div className="h-px w-full bg-gray-100 dark:bg-white/5 mb-6"></div>
-            {children}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className="pt-safe min-h-screen bg-[#F2F2F7] dark:bg-black page-transition pb-28 md:pb-10">
       
@@ -324,10 +324,11 @@ const Settings: React.FC<SettingsProps> = ({
           
           {/* 1. GOOGLE ACCOUNT */}
           <AccordionItem 
-            id="google" 
             title={t('set.google')} 
             icon={Cloud} 
             subtext={user.googleEmail ? 'Connected' : t('set.backup.desc')}
+            isOpen={openSection === 'google'}
+            onToggle={() => toggleSection('google')}
           >
               {!user.googleEmail ? (
                 <div className="flex flex-col items-center text-center space-y-6 py-2">
@@ -405,10 +406,11 @@ const Settings: React.FC<SettingsProps> = ({
 
           {/* 2. PREFERENCES */}
           <AccordionItem 
-            id="preferences" 
             title={t('set.pref')} 
             icon={Sliders} 
             subtext={`${language.toUpperCase()}, ${darkMode ? 'Dark' : 'Light'}`}
+            isOpen={openSection === 'preferences'}
+            onToggle={() => toggleSection('preferences')}
           >
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-2">
@@ -439,10 +441,11 @@ const Settings: React.FC<SettingsProps> = ({
 
           {/* 3. CATEGORIES */}
           <AccordionItem 
-            id="categories" 
             title={t('set.cats')} 
             icon={Tag} 
             subtext={`${filteredCategories.length} Categories`}
+            isOpen={openSection === 'categories'}
+            onToggle={() => toggleSection('categories')}
           >
               <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1 mb-4">
                   <button onClick={() => setCatTypeFilter('expense')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ios-touch-target ${catTypeFilter === 'expense' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-400'}`}>{t('add.expense')}</button>
@@ -470,10 +473,11 @@ const Settings: React.FC<SettingsProps> = ({
 
           {/* 4. SECURITY */}
           <AccordionItem 
-            id="security" 
             title={t('set.sec')} 
             icon={Shield} 
             subtext={t('set.pin')}
+            isOpen={openSection === 'security'}
+            onToggle={() => toggleSection('security')}
           >
              <div className="flex flex-col items-center py-2">
                 <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center text-primary mb-6 animate-pulse">

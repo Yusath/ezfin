@@ -19,7 +19,13 @@ function App() {
   // -- State --
   const [isAppLoading, setIsAppLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  
+  // Default to Dark Mode (true) unless 'light' is explicitly saved
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    return saved !== 'light';
+  });
+  
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   
   // Data State
@@ -38,8 +44,7 @@ function App() {
         setCategories(loadedCats);
         setTransactions(loadedTxs);
         
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') setDarkMode(true);
+        // Theme initialization is handled by useState lazy init
 
         // Init Google Service
         googleSheetService.initClient((success) => {

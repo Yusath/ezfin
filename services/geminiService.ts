@@ -18,6 +18,7 @@ const fileToBase64 = (file: File): Promise<string> => {
 
 export const getFinancialAdvice = async (transactions: Transaction[], userName: string): Promise<string> => {
   try {
+    // Gunakan process.env.API_KEY sesuai konfigurasi Vite
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     // Summarize data for the prompt
@@ -63,6 +64,7 @@ export const getFinancialAdvice = async (transactions: Transaction[], userName: 
 
 export const scanReceipt = async (file: File): Promise<any> => {
   try {
+    // Gunakan process.env.API_KEY sesuai konfigurasi Vite
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const base64 = await fileToBase64(file);
     

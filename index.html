@@ -53,20 +53,21 @@
       }
 
       /* ========================================= */
-      /* iOS ANIMATION SYSTEM                      */
+      /* iOS ANIMATION SYSTEM (SMOOTH & SLOW)      */
       /* ========================================= */
 
       :root {
-        --ios-ease: cubic-bezier(0.32, 0.72, 0, 1);
+        /* Slightly softer ease for slower animations */
+        --ios-ease: cubic-bezier(0.25, 1, 0.5, 1); 
       }
 
       /* 1. Page Transition (Tab Switch) - Subtle Fade & Scale */
       @keyframes iosTabFadeIn {
-        0% { opacity: 0; transform: scale(0.98); }
+        0% { opacity: 0; transform: scale(0.96); }
         100% { opacity: 1; transform: scale(1); }
       }
       .page-transition {
-        animation: iosTabFadeIn 0.4s var(--ios-ease) forwards;
+        animation: iosTabFadeIn 1s var(--ios-ease) forwards;
         transform-origin: center top;
       }
 
@@ -75,17 +76,17 @@
         0% { transform: translateY(100%); opacity: 0; }
         100% { transform: translateY(0); opacity: 1; }
       }
-      .page-slide-up {
-        animation: iosModalSlideUp 0.5s var(--ios-ease) forwards;
+      .page-slide-up, .animate-ios-slide-up {
+        animation: iosModalSlideUp 1s var(--ios-ease) forwards;
       }
 
       /* 3. List Item Entry (Slide from Right) */
       @keyframes iosListSlideIn {
-        from { opacity: 0; transform: translateX(20px); }
+        from { opacity: 0; transform: translateX(30px); }
         to { opacity: 1; transform: translateX(0); }
       }
       .animate-slide-in-right {
-        animation: iosListSlideIn 0.4s var(--ios-ease) forwards;
+        animation: iosListSlideIn 1s var(--ios-ease) forwards;
       }
 
       /* 4. Dropdown/Accordion Animation */
@@ -94,18 +95,28 @@
         to { opacity: 1; transform: translateY(0); max-height: 800px; }
       }
       .animate-accordion-down {
-        animation: accordionDown 0.4s var(--ios-ease) forwards;
+        animation: accordionDown 0.8s var(--ios-ease) forwards;
         overflow: hidden;
+      }
+      
+      /* 4.5 Fade In General */
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      .animate-fade-in, .animate-ios-fade-in {
+        animation: fadeIn 1s var(--ios-ease) forwards;
       }
 
       /* 5. Tactile Touch Feedback (Active State) */
       .ios-touch-target {
         cursor: pointer;
-        transition: transform 0.1s ease, opacity 0.1s ease, background-color 0.2s ease;
+        transition: transform 0.4s ease, opacity 0.4s ease, background-color 0.4s ease;
       }
       .ios-touch-target:active {
         transform: scale(0.96);
         opacity: 0.8;
+        transition-duration: 0.1s; /* Quick in, slow out */
       }
       
       /* 6. Shake Animation for Errors */
@@ -115,7 +126,7 @@
         20%, 40%, 60%, 80% { transform: translateX(4px); }
       }
       .animate-shake {
-        animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        animation: shake 0.6s cubic-bezier(.36,.07,.19,.97) both;
       }
 
       /* iOS Safe Area Utilities */
@@ -150,6 +161,15 @@
             },
             boxShadow: {
               'ios': '0 4px 20px -2px rgba(0, 0, 0, 0.1)',
+            },
+            animation: {
+              'ios-fade-in': 'fadeIn 1s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              }
             }
           }
         }
@@ -174,7 +194,7 @@
 }
 </script>
 </head>
-  <body class="bg-surface dark:bg-black text-gray-900 dark:text-gray-100 transition-colors duration-300 overflow-hidden select-none">
+  <body class="bg-surface dark:bg-black text-gray-900 dark:text-gray-100 transition-colors duration-1000 overflow-hidden select-none">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

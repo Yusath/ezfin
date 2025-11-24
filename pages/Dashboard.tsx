@@ -18,9 +18,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
   const { t } = useLanguage();
   const [chartPeriod, setChartPeriod] = useState<'week' | 'month' | 'year'>('month');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  
+  // Local state for editing profile
   const [editName, setEditName] = useState(user.name);
   const [editAvatar, setEditAvatar] = useState(user.avatarUrl);
+  
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  // Sync local edit state when user prop updates (e.g. after Google Login or DB Load)
+  useEffect(() => {
+    setEditName(user.name);
+    setEditAvatar(user.avatarUrl);
+  }, [user]);
 
   // --- 1. CORE DATA CALCULATION ENGINE ---
   const calculateRealTotal = (t: Transaction): number => {
@@ -156,12 +165,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
     try {
       const token = await googleSheetService.signIn();
       const userInfo = await googleSheetService.getUserInfo(token);
+      
+      // Update User Profile with Google Info
       onUpdateUser({ 
+        name: userInfo.name,          // Sync Name
+        avatarUrl: userInfo.picture,  // Sync Photo
         googleEmail: userInfo.email,
         googlePhotoUrl: userInfo.picture,
       });
-      setIsProfileModalOpen(false);
-      navigate('/settings');
+      
     } catch (error) {
       console.error(error);
       alert("Failed to sign in with Google");
@@ -224,10 +236,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
       </div>
 
       {/* DASHBOARD GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full">
+      {/* Changed gap-4 to gap-y-4 to remove horizontal gap on mobile */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-y-4 md:gap-6 w-full">
 
         {/* Hero Card (Balance) - Full Stretch on Mobile */}
-        <div className="md:col-span-8 relative overflow-hidden rounded-b-[2.5rem] md:rounded-[2rem] p-6 md:p-8 shadow-ios shadow-blue-500/20 bg-gradient-to-br from-[#007AFF] to-[#5856D6] text-white ios-touch-target">
+        {/* Added w-full to ensure it touches edges */}
+        <div className="md:col-span-8 w-full relative overflow-hidden rounded-b-[2.5rem] md:rounded-[2rem] p-6 md:p-8 shadow-ios shadow-blue-500/20 bg-gradient-to-br from-[#007AFF] to-[#5856D6] text-white ios-touch-target">
           <div className="relative z-10 flex flex-col items-center md:items-start text-center md:text-left">
             <span className="text-blue-100 text-xs font-semibold tracking-widest uppercase mb-2 opacity-80">{t('dash.balance')}</span>
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-8 break-words max-w-full">
@@ -414,7 +428,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
             {/* Avatar Section */}
             <div className="flex flex-col items-center mb-8">
               <div className="relative cursor-pointer ios-touch-target" onClick={generateNewAvatar}>
-                 <img src={editAvatar} alt="Avatar" className="w-24 h-24 rounded-full border-4 border-gray-100 dark:border-white/10 bg-gray-50" />
+                 <img src={editAvatar} alt="Avatar" className="w-24 h-24 rounded-full border-4 border-gray-100 dark:border-white/10 bg-gray-50 object-cover" />
                  <div className="absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full shadow-lg border-2 border-white dark:border-black">
                    <RefreshCcw size={14} />
                  </div>

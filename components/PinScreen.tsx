@@ -95,7 +95,7 @@ const PinScreen: React.FC<PinScreenProps> = ({ correctPin, onSuccess }) => {
       
       {/* Footer hint */}
       <div className="absolute bottom-10 text-white/30 text-xs font-medium uppercase tracking-widest animate-pulse pointer-events-none">
-        Secured by EZFin
+        Build with &#x2764;&#xFE0F; by Yusathid
       </div>
     </div>
   );

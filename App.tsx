@@ -46,9 +46,13 @@ function App() {
         
         // Theme initialization is handled by useState lazy init
 
-        // Init Google Service
+        // Init Google Service with Auto Restore
         googleSheetService.initClient((success) => {
-          if (success) console.log("Google Services Initialized");
+          if (success) {
+             console.log("Google Services Initialized & Session Restored (if available)");
+             // If we already have a session, we can optionally trigger a background check here, 
+             // but strictly speaking, we wait for isAuthenticated to start big syncs.
+          }
         });
 
       } catch (error) {
@@ -65,7 +69,10 @@ function App() {
   // -- Automated Cloud Sync Effect on Login --
   useEffect(() => {
     if (isAuthenticated && user.googleSheetId) {
-      performFullCloudSync(user.googleSheetId);
+      // Small delay to ensure Google Token restoration is complete if it raced with PIN entry
+      setTimeout(() => {
+        performFullCloudSync(user.googleSheetId!);
+      }, 1000);
     }
   }, [isAuthenticated, user.googleSheetId]);
 
@@ -103,7 +110,11 @@ function App() {
           .then(() => addToast('Transaction saved & synced to Drive!', 'success'))
           .catch((e) => {
              console.error("Sync Error", e);
-             addToast('Saved locally, but Google Sync failed.', 'info');
+             if (e.message === 'UNAUTHENTICATED') {
+               addToast('Sesi Google berakhir. Mohon login ulang di Settings.', 'error');
+             } else {
+               addToast('Saved locally, but Google Sync failed.', 'info');
+             }
           });
       } else {
         addToast('Transaksi berhasil disimpan!', 'success');
@@ -142,9 +153,13 @@ function App() {
       }
 
       addToast('Sync Complete! Security, Preferences & Activity updated.', 'success');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Auto Sync Failed", error);
-      // Don't show error toast for background sync to avoid annoyance if offline
+      if (error.message === 'UNAUTHENTICATED') {
+         googleSheetService.signOut(); // Clean up invalid local storage
+         addToast('Sesi Google berakhir. Mohon login ulang di Settings.', 'error');
+         // We don't remove googleSheetId from user profile to persist "intent" to sync
+      }
     }
   };
 
@@ -206,9 +221,13 @@ function App() {
             await googleSheetService.saveAppSettings(sheetId, user.pin, categories, currentThemeState);
             return false;
         }
-    } catch (e) {
+    } catch (e: any) {
         console.error(e);
-        addToast('Settings sync failed', 'error');
+        if (e.message !== 'UNAUTHENTICATED') {
+            addToast('Settings sync failed', 'error');
+        } else {
+            throw e; // Propagate auth error
+        }
         return false;
     }
   };
@@ -287,7 +306,8 @@ function App() {
   return (
     <LanguageProvider>
       <Router>
-        <div className={`flex h-screen w-full bg-[#F2F2F7] dark:bg-black text-gray-900 dark:text-gray-100 transition-colors duration-300 overflow-hidden ${darkMode ? 'dark' : ''}`}>
+        {/* Changed h-screen to h-[100dvh] for mobile viewport fix */}
+        <div className={`flex h-[100dvh] w-full bg-[#F2F2F7] dark:bg-black text-gray-900 dark:text-gray-100 transition-colors duration-300 overflow-hidden ${darkMode ? 'dark' : ''}`}>
           
           <ToastContainer toasts={toasts} removeToast={removeToast} />
           
@@ -301,7 +321,8 @@ function App() {
             
             {/* Scrollable Page Content */}
             <main className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth no-scrollbar">
-              <div className="min-h-full pb-24 md:pb-8 md:p-8 max-w-[1600px] mx-auto w-full">
+              {/* Increased bottom padding (pb-32) on mobile to ensure content isn't hidden behind the floating navbar */}
+              <div className="min-h-full pb-32 md:pb-8 md:p-8 max-w-[1600px] mx-auto w-full">
                 <Routes>
                   <Route 
                     path="/" 

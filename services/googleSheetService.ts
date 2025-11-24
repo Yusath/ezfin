@@ -9,6 +9,7 @@ declare global {
 
 // User provided Client ID
 const DEFAULT_CLIENT_ID = "28569786950-2lnehaar8vn0cueo4gpav84umuc30kc1.apps.googleusercontent.com";
+const TOKEN_STORAGE_KEY = 'ezfin_google_access_token';
 
 // Initial load from Env or LocalStorage or Default
 let CLIENT_ID = process.env.GOOGLE_CLIENT_ID || localStorage.getItem('GOOGLE_CLIENT_ID') || DEFAULT_CLIENT_ID;
@@ -41,6 +42,10 @@ export const googleSheetService = {
   
   get isConfigured() {
     return !!CLIENT_ID;
+  },
+
+  get hasValidSession() {
+    return !!accessToken;
   },
 
   updateCredentials: (clientId: string, apiKey?: string) => {
@@ -114,12 +119,26 @@ export const googleSheetService = {
             throw (resp);
           }
           accessToken = resp.access_token;
+          // Save to LocalStorage for persistence
+          localStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
+          
           // CRITICAL FIX: Manually set the token for GAPI
           if (window.gapi && window.gapi.client) {
             window.gapi.client.setToken(resp);
           }
         },
       });
+
+      // --- AUTO RESTORE SESSION LOGIC ---
+      const savedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+      if (savedToken) {
+          console.log("Restoring Google Session from LocalStorage...");
+          accessToken = savedToken;
+          if (window.gapi && window.gapi.client) {
+             // We construct a fake token object that GAPI expects
+             window.gapi.client.setToken({ access_token: savedToken });
+          }
+      }
 
       isInitialized = true;
       onInitComplete(true);
@@ -143,6 +162,9 @@ export const googleSheetService = {
                 reject(resp);
             } else {
                 accessToken = resp.access_token;
+                // Save to LocalStorage
+                localStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
+
                 // CRITICAL FIX: Bind the token to GAPI client immediately
                 if (window.gapi && window.gapi.client) {
                    window.gapi.client.setToken(resp);
@@ -170,9 +192,10 @@ export const googleSheetService = {
     const token = window.gapi?.client?.getToken();
     if (token !== null) {
       window.google?.accounts?.oauth2?.revoke(token.access_token, () => {});
-      window.gapi?.client?.setToken(null); // Clear GAPI token
-      accessToken = null;
     }
+    window.gapi?.client?.setToken(null); // Clear GAPI token
+    localStorage.removeItem(TOKEN_STORAGE_KEY); // Clear LocalStorage
+    accessToken = null;
   },
 
   getUserInfo: async (token: string): Promise<{ name: string, email: string, picture: string }> => {
@@ -180,6 +203,7 @@ export const googleSheetService = {
       const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (response.status === 401) throw new Error("UNAUTHENTICATED");
       const data = await response.json();
       return {
         name: data.name,
@@ -203,8 +227,9 @@ export const googleSheetService = {
          pageSize: 10
        });
        return response.result.files;
-     } catch (error) {
+     } catch (error: any) {
        console.error("Folder search failed", error);
+       if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
        return [];
      }
   },
@@ -281,8 +306,9 @@ export const googleSheetService = {
       });
 
       return { id: spreadsheetId, name: title };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating sheet", error);
+      if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
       throw error;
     }
   },
@@ -290,7 +316,7 @@ export const googleSheetService = {
   appendTransaction: async (spreadsheetId: string, tx: Transaction) => {
     if (!accessToken && window.gapi?.client?.getToken() === null) {
         console.warn("Skipping sync: No access token");
-        return;
+        throw new Error("UNAUTHENTICATED");
     }
 
     // Format items string: "2x Burger (@20000), 1x Coke (@5000)"
@@ -316,8 +342,9 @@ export const googleSheetService = {
           values: [row],
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error appending row", error);
+      if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
       throw error;
     }
   },
@@ -347,8 +374,9 @@ export const googleSheetService = {
           values: rows,
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error bulk appending", error);
+      if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
       throw error;
     }
   },
@@ -361,8 +389,9 @@ export const googleSheetService = {
             spaces: 'drive'
         });
         return response.result.files;
-    } catch (error) {
+    } catch (error: any) {
         console.error("Search failed", error);
+        if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
         return [];
     }
   },
@@ -421,8 +450,9 @@ export const googleSheetService = {
         };
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Fetch transactions failed", error);
+      if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
       throw error;
     }
   },
@@ -451,8 +481,9 @@ export const googleSheetService = {
               resource: { values: [['PIN', 'CATEGORIES', 'DARK_MODE']] }
           });
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to ensure settings sheet", e);
+      if (e?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
     }
   },
 
@@ -465,8 +496,9 @@ export const googleSheetService = {
             valueInputOption: 'RAW',
             resource: { values: [[pin, JSON.stringify(categories), darkMode.toString()]] }
         });
-      } catch (e) {
+      } catch (e: any) {
         console.error("Failed to save app settings", e);
+        if (e?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
       }
   },
 
@@ -494,8 +526,9 @@ export const googleSheetService = {
               categories: cats,
               darkMode: darkMode
           };
-      } catch (e) {
+      } catch (e: any) {
           console.warn("Settings sheet missing or empty", e);
+          if (e?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
           return null;
       }
   }

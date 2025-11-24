@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#0F172A" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
     <title>EZFin</title>
     <!-- Keeping Tailwind CDN for styling consistency with current codebase -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -38,23 +38,18 @@
           scrollbar-width: none;  /* Firefox */
       }
       
-      /* Glassmorphism utilities */
-      .glass {
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border-bottom: 0.5px solid rgba(0, 0, 0, 0.05);
-      }
-      .dark .glass {
-        background: rgba(30, 41, 59, 0.7);
-        border-bottom: 0.5px solid rgba(255, 255, 255, 0.05);
-      }
-      
       /* Hide number input arrows */
       input[type=number]::-webkit-inner-spin-button, 
       input[type=number]::-webkit-outer-spin-button { 
         -webkit-appearance: none; 
         margin: 0; 
+      }
+
+      /* Prevent iOS Zoom on Input Focus */
+      @media screen and (max-width: 768px) {
+        input, select, textarea {
+          font-size: 16px !important;
+        }
       }
 
       /* ========================================= */
@@ -96,19 +91,21 @@
       /* 4. Dropdown/Accordion Animation */
       @keyframes accordionDown {
         from { opacity: 0; transform: translateY(-8px); max-height: 0; }
-        to { opacity: 1; transform: translateY(0); max-height: 500px; }
+        to { opacity: 1; transform: translateY(0); max-height: 800px; }
       }
       .animate-accordion-down {
-        animation: accordionDown 0.3s var(--ios-ease) forwards;
+        animation: accordionDown 0.4s var(--ios-ease) forwards;
+        overflow: hidden;
       }
 
       /* 5. Tactile Touch Feedback (Active State) */
       .ios-touch-target {
-        transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.2s ease;
+        cursor: pointer;
+        transition: transform 0.1s ease, opacity 0.1s ease, background-color 0.2s ease;
       }
       .ios-touch-target:active {
         transform: scale(0.96);
-        opacity: 0.9;
+        opacity: 0.8;
       }
       
       /* 6. Shake Animation for Errors */
@@ -144,13 +141,15 @@
               warning: '#FF9500', // iOS Orange
               dark: '#000000', // True Black
               surface: '#F2F2F7', // iOS Light Gray Background
-              'surface-dark': '#1C1C1E', // iOS Dark Gray Background
+              'surface-dark': '#000000', // iOS Dark Background
+              'card-light': '#FFFFFF',
+              'card-dark': '#1C1C1E',
             },
             fontFamily: {
               sans: ['SF Pro Display', '-apple-system', 'Inter', 'sans-serif'],
             },
-            animation: {
-              'ios-fade': 'iosTabFadeIn 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards',
+            boxShadow: {
+              'ios': '0 4px 20px -2px rgba(0, 0, 0, 0.1)',
             }
           }
         }
@@ -177,7 +176,6 @@
 </head>
   <body class="bg-surface dark:bg-black text-gray-900 dark:text-gray-100 transition-colors duration-300 overflow-hidden select-none">
     <div id="root"></div>
-    <!-- Point to the entry file for Vite to bundle -->
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>

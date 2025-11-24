@@ -7,6 +7,7 @@ const fileToBase64 = (file: File): Promise<string> => {
     reader.onload = () => {
       const result = reader.result as string;
       // Remove data:image/jpeg;base64, prefix if present
+      // Works for PDF data URLs too (data:application/pdf;base64,...)
       const base64 = result.includes(',') ? result.split(',')[1] : result;
       resolve(base64);
     };
@@ -66,61 +67,42 @@ export const scanReceipt = async (file: File): Promise<any> => {
     const base64 = await fileToBase64(file);
     
     const prompt = `
-      You are a technical reasoning and extraction agent. Your job is to analyze the provided receipt image and convert it into a STRICTLY STRUCTURED JSON object that matches EXACTLY the required manual form fields below.
+      You are an expert Indonesian Receipt Extraction Agent.
+      Analyze the image/document and extract transaction details into valid JSON.
 
-      ========================================
-      ==  FIXED MANUAL FORM FIELD TEMPLATE  ==
-      ========================================
-      Your JSON output MUST contain these exact fields and structure:
+      CONTEXT:
+      - Currency: Indonesian Rupiah (IDR).
+      - Number Format: "10.000" means 10000. "10,000" usually means 10. Ignore thousands separators (dots).
+      - If a store name is abbreviated, try to infer the full name (e.g., "Indomrt" -> "Indomaret").
 
+      EXTRACTION TARGETS:
+      1. Store Name (nama_toko)
+      2. Transaction Date (tanggal) - Format YYYY-MM-DD
+      3. Items (daftar_barang):
+         - Name (nama)
+         - Quantity (jumlah) -> If missing, deduce from TotalPrice / UnitPrice. Default to 1.
+         - Unit Price (harga_satuan) -> If missing, deduce from TotalPrice / Quantity.
+         - Total Price (total_harga)
+      4. Grand Total (total_belanja)
+
+      JSON SCHEMA:
       {
-        "store": {
-          "name": "",
-          "address": "",
-          "transaction_date": ""
-        },
+        "store_name": "String",
+        "transaction_date": "YYYY-MM-DD",
         "items": [
           {
-            "item_name": "",
-            "quantity": null,
-            "unit_price": null,
-            "total_price": null
+            "name": "String",
+            "qty": Number,
+            "price": Number,
+            "total": Number
           }
         ],
-        "summary": {
-          "grand_total": null
-        }
+        "grand_total": Number
       }
 
       RULES:
-      - Do NOT change field names.
-      - Do NOT add extra fields.
-      - Do NOT remove required fields.
-      - Do NOT nest fields differently.
-      - If data is missing, return null, never invent.
-      - All numeric values must be integers without separators.
-      - Dates must follow dd/mm/yyyy or dd-mm-yyyy format.
-      - Item_name must be a cleaned product name, not including quantity or price.
-
-      ========================================
-      ==  EXTRACTION RULES FOR INDONESIAN RECEIPTS ==
-      ========================================
-      - Prices may appear as 3500, 3.500, 3,500 -> normalize to 3500.
-      - Quantity may appear as:
-        "2 x 3500", "2x3500", "2 pcs", "Qty:2"
-      - Item line patterns you must detect:
-        [name] [qty] x [unit] [total]
-        [name] [total]          -> quantity = 1, unit_price = total
-        [name] [qty] [unit_price] [total]
-      - Ignore text like "TERIMA KASIH", promos, or membership info.
-      - Grand total can appear as:
-        "TOTAL"
-        "TOTAL BAYAR"
-        "TOTAL BELANJA"
-        "JUMLAH"
-        Always extract the numeric value after it.
-
-      Output ONLY valid JSON. No comments, no explanations.
+      - Output ONLY raw JSON. No markdown formatting.
+      - Ensure all numbers are integers (no decimals).
     `;
 
     const response = await ai.models.generateContent({

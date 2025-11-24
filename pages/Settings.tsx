@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Category, Transaction } from '../types';
-import { Moon, Shield, Trash2, Plus, Cloud, FileSpreadsheet, LogOut, Loader2, ArrowRight, Download, Globe, FileText, Folder, ChevronDown, Sliders, Tag } from 'lucide-react';
+import { Moon, Shield, Trash2, Plus, Cloud, FileSpreadsheet, LogOut, Loader2, ArrowRight, Download, Globe, FileText, Folder, ChevronDown, Sliders, Tag, Lock, Check } from 'lucide-react';
 import { googleSheetService } from '../services/googleSheetService';
 import { useLanguage } from '../contexts/LanguageContext';
 import { dbService } from '../services/db';
@@ -260,22 +260,22 @@ const Settings: React.FC<SettingsProps> = ({
   const AccordionItem = ({ id, title, icon: Icon, subtext, children }: any) => {
     const isOpen = openSection === id;
     return (
-      <div className={`bg-white dark:bg-[#1C1C1E] rounded-3xl overflow-hidden transition-all duration-300 border border-gray-100 dark:border-white/5 ${isOpen ? 'shadow-lg ring-2 ring-primary/5' : 'shadow-sm'}`}>
+      <div className={`bg-white dark:bg-[#1C1C1E] rounded-[1.5rem] overflow-hidden transition-all duration-300 border border-gray-100 dark:border-white/5 ${isOpen ? 'shadow-lg ring-1 ring-black/5 dark:ring-white/10' : 'shadow-sm'}`}>
         <button 
           onClick={() => toggleSection(id)}
           className="w-full flex items-center justify-between p-5 ios-touch-target"
         >
           <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-2xl transition-colors ${isOpen ? 'bg-primary text-white' : 'bg-gray-50 dark:bg-white/10 text-gray-500 dark:text-gray-400'}`}>
-              <Icon size={22} />
+            <div className={`p-3 rounded-2xl transition-colors duration-300 ${isOpen ? 'bg-primary text-white' : 'bg-gray-50 dark:bg-white/10 text-gray-500 dark:text-gray-400'}`}>
+              <Icon size={22} strokeWidth={2.5} />
             </div>
             <div className="text-left">
-              <h3 className="font-bold text-base text-gray-900 dark:text-white">{title}</h3>
+              <h3 className="font-bold text-base text-gray-900 dark:text-white tracking-tight">{title}</h3>
               {!isOpen && subtext && <p className="text-xs text-gray-400 mt-0.5 font-medium">{subtext}</p>}
             </div>
           </div>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${isOpen ? 'bg-gray-100 dark:bg-white/10 rotate-180 text-primary' : 'text-gray-300'}`}>
-             <ChevronDown size={18} />
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${isOpen ? 'bg-gray-100 dark:bg-white/10 rotate-180 text-primary' : 'text-gray-300 dark:text-gray-600'}`}>
+             <ChevronDown size={18} strokeWidth={3} />
           </div>
         </button>
         
@@ -291,27 +291,27 @@ const Settings: React.FC<SettingsProps> = ({
   };
 
   return (
-    <div className="pt-safe min-h-screen bg-[#F2F2F7] dark:bg-black page-transition pb-20">
+    <div className="pt-safe min-h-screen bg-[#F2F2F7] dark:bg-black page-transition pb-28 md:pb-10">
       
       {/* iOS Large Title */}
       <div className="px-6 py-6 pb-2">
         <h1 className="text-3xl font-extrabold text-black dark:text-white tracking-tight">{t('set.title')}</h1>
       </div>
 
-      <div className="p-4 space-y-6">
+      <div className="p-4 space-y-6 max-w-4xl mx-auto">
         
         {/* EXPORT (Hero Action) */}
         <button 
            onClick={() => setShowExportModal(true)}
-           className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-[2rem] p-6 shadow-xl shadow-green-500/20 flex items-center justify-between ios-touch-target"
+           className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-[2rem] p-6 shadow-xl shadow-emerald-500/20 flex items-center justify-between ios-touch-target group"
         >
            <div className="flex items-center gap-5">
-              <div className="p-3.5 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/10">
+              <div className="p-3.5 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/10 group-active:scale-95 transition-transform">
                  <Download size={26} />
               </div>
               <div className="text-left">
-                 <p className="font-bold text-xl">{t('set.export')}</p>
-                 <p className="text-sm text-green-100 font-medium opacity-90">{t('set.export.desc')}</p>
+                 <p className="font-bold text-xl tracking-tight">{t('set.export')}</p>
+                 <p className="text-sm text-emerald-100 font-medium opacity-90">{t('set.export.desc')}</p>
               </div>
            </div>
            <div className="bg-white/10 p-2 rounded-full">
@@ -319,7 +319,7 @@ const Settings: React.FC<SettingsProps> = ({
            </div>
         </button>
 
-        {/* SETTINGS GROUP */}
+        {/* SETTINGS GROUP - Dropdowns */}
         <div className="space-y-4">
           
           {/* 1. GOOGLE ACCOUNT */}
@@ -330,14 +330,17 @@ const Settings: React.FC<SettingsProps> = ({
             subtext={user.googleEmail ? 'Connected' : t('set.backup.desc')}
           >
               {!user.googleEmail ? (
-                <div className="flex flex-col items-center text-center space-y-4 py-2">
+                <div className="flex flex-col items-center text-center space-y-6 py-2">
+                  <div className="w-16 h-16 bg-blue-50 dark:bg-white/5 rounded-full flex items-center justify-center text-primary mb-2">
+                     <Cloud size={32} />
+                  </div>
                   <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto leading-relaxed">
                     {t('set.backup.desc')}
                   </p>
                   <button 
                     onClick={handleConnectGoogle}
                     disabled={isGoogleLoading}
-                    className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-500/30 ios-touch-target flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale hover:bg-blue-600"
+                    className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-500/30 ios-touch-target flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale hover:bg-blue-600 transition-colors"
                   >
                     {isGoogleLoading ? <Loader2 className="animate-spin" /> : <ArrowRight size={20} />}
                     {t('set.signin')}
@@ -348,9 +351,12 @@ const Settings: React.FC<SettingsProps> = ({
                   <div className="flex items-center justify-between bg-gray-50 dark:bg-black/20 p-4 rounded-2xl border border-gray-100 dark:border-white/5">
                       <div className="flex items-center gap-4">
                         <img src={user.googlePhotoUrl || user.avatarUrl} className="w-12 h-12 rounded-full border-2 border-white shadow-sm" />
-                        <div className="overflow-hidden">
+                        <div className="overflow-hidden text-left">
                           <p className="font-bold text-gray-900 dark:text-white text-sm truncate max-w-[150px]">{user.googleEmail}</p>
-                          <p className="text-xs text-green-500 font-bold bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-md inline-block mt-1">Account Linked</p>
+                          <div className="flex items-center gap-1 mt-1">
+                             <Check size={12} className="text-green-500" />
+                             <p className="text-xs text-green-500 font-bold">Linked</p>
+                          </div>
                         </div>
                       </div>
                       <button onClick={handleDisconnectGoogle} className="p-3 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl hover:bg-red-100 transition-colors ios-touch-target">
@@ -359,7 +365,7 @@ const Settings: React.FC<SettingsProps> = ({
                   </div>
 
                   <div>
-                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-3 ml-1">{t('set.sheet')}</h4>
+                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-3 ml-1 tracking-wider">{t('set.sheet')}</h4>
                     {!user.googleSheetId ? (
                         <button 
                           onClick={handleChangeSheet}
@@ -372,7 +378,7 @@ const Settings: React.FC<SettingsProps> = ({
                         <div className="space-y-3">
                           <div className="bg-gray-50 dark:bg-black/20 rounded-2xl p-4 flex items-center justify-between border border-gray-100 dark:border-white/5">
                             <div className="flex items-center gap-3 overflow-hidden">
-                                <div className="w-10 h-10 bg-green-100 text-green-600 rounded-xl flex items-center justify-center shrink-0">
+                                <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-xl flex items-center justify-center shrink-0">
                                   <FileSpreadsheet size={20} />
                                 </div>
                                 <span className="text-sm font-bold text-gray-900 dark:text-white truncate">{user.googleSheetName}</span>
@@ -407,7 +413,7 @@ const Settings: React.FC<SettingsProps> = ({
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-2">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center justify-center">
                         <Globe size={20} />
                       </div>
                       <span className="font-bold text-sm text-gray-900 dark:text-white">{t('set.lang')}</span>
@@ -419,7 +425,7 @@ const Settings: React.FC<SettingsProps> = ({
                 </div>
                 <div className="flex items-center justify-between p-2">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
                         <Moon size={20} fill="currentColor" />
                       </div>
                       <span className="font-bold text-sm text-gray-900 dark:text-white">{t('set.dark')}</span>
@@ -471,7 +477,7 @@ const Settings: React.FC<SettingsProps> = ({
           >
              <div className="flex flex-col items-center py-2">
                 <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center text-primary mb-6 animate-pulse">
-                  <Shield size={36} />
+                  <Lock size={36} />
                 </div>
                 <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-6 text-center">{t('set.pin')}</h3>
                 <input 
@@ -488,7 +494,7 @@ const Settings: React.FC<SettingsProps> = ({
                 <button 
                   onClick={handleSavePinClick} 
                   disabled={newPin.length !== 6} 
-                  className="w-full bg-primary text-white font-bold py-4 rounded-2xl disabled:opacity-50 shadow-lg shadow-blue-500/30 ios-touch-target hover:bg-blue-600"
+                  className="w-full bg-primary text-white font-bold py-4 rounded-2xl disabled:opacity-50 shadow-lg shadow-blue-500/30 ios-touch-target hover:bg-blue-600 transition-colors"
                 >
                   {t('set.updatePin')}
                 </button>
@@ -526,7 +532,7 @@ const Settings: React.FC<SettingsProps> = ({
       {/* Export Modal with Period Selector */}
       {showExportModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-ios-fade-in">
-          <div className="bg-white dark:bg-[#1C1C1E] w-full max-w-sm rounded-[2rem] p-6 shadow-2xl page-slide-up">
+          <div className="bg-white dark:bg-[#1C1C1E] w-full max-w-sm rounded-[2.5rem] p-6 shadow-2xl page-slide-up">
             <h3 className="text-xl font-bold text-center mb-2 dark:text-white">{t('set.export')}</h3>
             <p className="text-center text-sm text-gray-400 mb-6">Pilih periode laporan</p>
 
@@ -550,17 +556,17 @@ const Settings: React.FC<SettingsProps> = ({
             </div>
 
             <div className="space-y-3">
-              <button onClick={() => handleExport('excel')} className="w-full p-4 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-xl flex items-center gap-4 font-bold hover:bg-green-100 transition-colors ios-touch-target">
+              <button onClick={() => handleExport('excel')} className="w-full p-4 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-2xl flex items-center gap-4 font-bold hover:bg-green-100 transition-colors ios-touch-target">
                 <FileSpreadsheet size={24} /> Excel (.xlsx)
               </button>
-              <button onClick={() => handleExport('pdf')} className="w-full p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-xl flex items-center gap-4 font-bold hover:bg-red-100 transition-colors ios-touch-target">
+              <button onClick={() => handleExport('pdf')} className="w-full p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-2xl flex items-center gap-4 font-bold hover:bg-red-100 transition-colors ios-touch-target">
                 <FileText size={24} /> PDF (.pdf)
               </button>
-              <button onClick={() => handleExport('docx')} className="w-full p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-xl flex items-center gap-4 font-bold hover:bg-blue-100 transition-colors ios-touch-target">
+              <button onClick={() => handleExport('docx')} className="w-full p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-2xl flex items-center gap-4 font-bold hover:bg-blue-100 transition-colors ios-touch-target">
                 <FileText size={24} /> Word (.doc)
               </button>
             </div>
-            <button onClick={() => setShowExportModal(false)} className="mt-6 w-full py-3 bg-gray-100 dark:bg-gray-800 rounded-xl font-bold text-gray-600 dark:text-gray-400 ios-touch-target">
+            <button onClick={() => setShowExportModal(false)} className="mt-6 w-full py-4 bg-gray-100 dark:bg-gray-800 rounded-2xl font-bold text-gray-600 dark:text-gray-400 ios-touch-target">
                {t('common.cancel')}
             </button>
           </div>
@@ -570,19 +576,19 @@ const Settings: React.FC<SettingsProps> = ({
       {/* Google Sheet Selection Modal */}
       {showSheetModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-ios-fade-in">
-          <div className="bg-white dark:bg-[#1C1C1E] w-full max-w-md rounded-[2rem] p-6 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] page-slide-up">
+          <div className="bg-white dark:bg-[#1C1C1E] w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] page-slide-up">
             <h3 className="text-xl font-bold text-center mb-2 dark:text-white">Setup Google Sheets</h3>
             <p className="text-center text-sm text-gray-500 mb-6">Choose where to save your data</p>
             
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
               
               <div className="space-y-3">
-                 <h4 className="text-xs font-bold text-gray-400 uppercase">Create New</h4>
+                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide">Create New</h4>
                  <div className="relative">
-                   <div className="flex items-center gap-2 bg-gray-50 dark:bg-black/20 p-2 rounded-xl border border-gray-100 dark:border-gray-800">
+                   <div className="flex items-center gap-2 bg-gray-50 dark:bg-black/20 p-2 rounded-2xl border border-gray-100 dark:border-gray-800">
                       <Folder size={18} className="text-gray-400 ml-2" />
                       <input 
-                        className="w-full bg-transparent text-sm p-1 focus:outline-none dark:text-white"
+                        className="w-full bg-transparent text-sm p-2 focus:outline-none dark:text-white"
                         placeholder={t('set.searchFolder')}
                         value={folderQuery}
                         onChange={(e) => handleSearchFolder(e.target.value)}
@@ -595,7 +601,7 @@ const Settings: React.FC<SettingsProps> = ({
                       )}
                    </div>
                    {foundFolders.length > 0 && !selectedFolder && (
-                     <div className="absolute top-full left-0 right-0 bg-white dark:bg-gray-800 shadow-xl rounded-xl mt-1 z-10 max-h-32 overflow-y-auto border border-gray-100 dark:border-gray-700">
+                     <div className="absolute top-full left-0 right-0 bg-white dark:bg-gray-800 shadow-xl rounded-2xl mt-1 z-10 max-h-32 overflow-y-auto border border-gray-100 dark:border-gray-700">
                         {foundFolders.map(f => (
                           <button 
                             key={f.id} 
@@ -612,7 +618,7 @@ const Settings: React.FC<SettingsProps> = ({
                  <button 
                   onClick={handleCreateSheet}
                   disabled={isGoogleLoading}
-                  className="w-full bg-primary text-white py-4 rounded-xl font-bold shadow-lg shadow-blue-500/20 ios-touch-target transition-transform flex items-center justify-center gap-2"
+                  className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-500/20 ios-touch-target transition-transform flex items-center justify-center gap-2"
                 >
                   {isGoogleLoading ? <Loader2 className="animate-spin" /> : <Plus size={20} />}
                   Create {selectedFolder ? `in "${selectedFolder.name}"` : '"EZFin Tracker"'}
@@ -621,7 +627,7 @@ const Settings: React.FC<SettingsProps> = ({
 
               <div className="relative flex py-2 items-center">
                 <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
-                <span className="flex-shrink-0 mx-4 text-gray-400 text-xs">OR SELECT EXISTING</span>
+                <span className="flex-shrink-0 mx-4 text-gray-400 text-xs font-bold">OR SELECT EXISTING</span>
                 <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
               </div>
 
@@ -633,7 +639,7 @@ const Settings: React.FC<SettingsProps> = ({
                     <button 
                       key={sheet.id}
                       onClick={() => handleSelectSheet(sheet)}
-                      className="w-full text-left p-4 rounded-xl bg-gray-50 dark:bg-black/30 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors flex items-center gap-3 ios-touch-target"
+                      className="w-full text-left p-4 rounded-2xl bg-gray-50 dark:bg-black/30 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors flex items-center gap-3 ios-touch-target"
                     >
                       <FileSpreadsheet className="text-green-600" size={20} />
                       <span className="font-semibold text-sm truncate dark:text-white">{sheet.name}</span>

@@ -62,6 +62,13 @@ function App() {
     initData();
   }, []);
 
+  // -- Automated Cloud Sync Effect on Login --
+  useEffect(() => {
+    if (isAuthenticated && user.googleSheetId) {
+      performFullCloudSync(user.googleSheetId);
+    }
+  }, [isAuthenticated, user.googleSheetId]);
+
   // -- Theme Effect --
   useEffect(() => {
     if (darkMode) {
@@ -108,6 +115,39 @@ function App() {
     }
   };
 
+  const performFullCloudSync = async (sheetId: string) => {
+    try {
+      addToast('Syncing data from Cloud...', 'info');
+      
+      // 1. Sync Settings (Security & Preferences: PIN, Categories, Theme)
+      // fetch & save logic handled inside
+      await handleSyncSettings(sheetId);
+      
+      // 2. Sync Activity (Transactions) - Bidirectional Fetch & Save
+      const cloudTxs = await googleSheetService.fetchTransactions(sheetId);
+      
+      // a. Identify Local transactions that are NOT in Cloud (Offline entries)
+      const cloudTxIds = new Set(cloudTxs.map(t => t.id));
+      const localTxsToPush = transactions.filter(t => !cloudTxIds.has(t.id));
+      
+      // b. Push missing local transactions to Cloud (Save)
+      if (localTxsToPush.length > 0) {
+         console.log(`Pushing ${localTxsToPush.length} missing transactions to cloud...`);
+         await googleSheetService.bulkAppendTransactions(sheetId, localTxsToPush);
+      }
+
+      // c. Import missing Cloud transactions to Local (Fetch)
+      if (cloudTxs.length > 0) {
+         await handleImportTransactions(cloudTxs);
+      }
+
+      addToast('Sync Complete! Security, Preferences & Activity updated.', 'success');
+    } catch (error) {
+      console.error("Auto Sync Failed", error);
+      // Don't show error toast for background sync to avoid annoyance if offline
+    }
+  };
+
   const handleImportTransactions = async (importedTxs: Transaction[]) => {
     try {
       await dbService.bulkAddTransactions(importedTxs);
@@ -121,10 +161,55 @@ function App() {
           return [...newUnique, ...prev].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       });
       
-      addToast(`${importedTxs.length} transactions synced from cloud!`, 'success');
     } catch (e) {
       console.error(e);
       addToast('Failed to save imported data', 'error');
+    }
+  };
+
+  const handleSyncSettings = async (sheetId: string, currentThemeState: boolean = darkMode) => {
+    try {
+        const cloudSettings = await googleSheetService.fetchAppSettings(sheetId);
+        if (cloudSettings) {
+            let hasChanges = false;
+            
+            // 1. Sync PIN (Security)
+            if (cloudSettings.pin && cloudSettings.pin !== user.pin) {
+                await handleUpdateProfile({ pin: cloudSettings.pin });
+                hasChanges = true;
+            }
+            
+            // 2. Sync Categories (Preferences)
+            if (cloudSettings.categories && cloudSettings.categories.length > 0) {
+                 // Overwrite local categories for simplicity, assuming Cloud is truth
+                 for (const cat of cloudSettings.categories) {
+                     await dbService.saveCategory(cat);
+                 }
+                 setCategories(cloudSettings.categories);
+                 hasChanges = true;
+            }
+
+            // 3. Sync Theme (Preferences)
+            if (cloudSettings.darkMode !== undefined && cloudSettings.darkMode !== currentThemeState) {
+               setDarkMode(cloudSettings.darkMode);
+               hasChanges = true;
+            }
+
+            if (hasChanges) {
+                console.log('Settings updated from Cloud');
+            } else {
+                console.log('Settings are already up to date');
+            }
+            return true;
+        } else {
+            // Cloud is empty, push local settings to initialize (Save)
+            await googleSheetService.saveAppSettings(sheetId, user.pin, categories, currentThemeState);
+            return false;
+        }
+    } catch (e) {
+        console.error(e);
+        addToast('Settings sync failed', 'error');
+        return false;
     }
   };
 
@@ -133,7 +218,11 @@ function App() {
       const newUser = { ...user, ...updatedUserPart };
       await dbService.saveUser(newUser);
       setUser(newUser);
-      addToast('Profil diperbarui', 'success');
+      
+      // Cloud Sync for PIN changes
+      if (newUser.googleSheetId && (updatedUserPart.pin || updatedUserPart.name)) {
+         googleSheetService.saveAppSettings(newUser.googleSheetId, newUser.pin, categories, darkMode).catch(console.error);
+      }
     } catch (error) {
       console.error(error);
       addToast('Gagal memperbarui profil', 'error');
@@ -144,8 +233,14 @@ function App() {
   const handleAddCategory = async (newCat: Category) => {
     try {
       await dbService.saveCategory(newCat);
-      setCategories(prev => [...prev, newCat]);
+      const newCats = [...categories, newCat];
+      setCategories(newCats);
       addToast('Kategori ditambahkan', 'success');
+
+      // Cloud Sync
+      if (user.googleSheetId) {
+        googleSheetService.saveAppSettings(user.googleSheetId, user.pin, newCats, darkMode).catch(console.error);
+      }
     } catch (e) {
       addToast('Gagal simpan kategori', 'error');
     }
@@ -154,10 +249,25 @@ function App() {
   const handleDeleteCategory = async (id: string) => {
     try {
       await dbService.deleteCategory(id);
-      setCategories(prev => prev.filter(c => c.id !== id));
+      const newCats = categories.filter(c => c.id !== id);
+      setCategories(newCats);
       addToast('Kategori dihapus', 'success');
+
+      // Cloud Sync
+      if (user.googleSheetId) {
+        googleSheetService.saveAppSettings(user.googleSheetId, user.pin, newCats, darkMode).catch(console.error);
+      }
     } catch (e) {
       addToast('Gagal hapus kategori', 'error');
+    }
+  };
+  
+  const toggleThemeHandler = () => {
+    const newMode = !darkMode;
+    setDarkMode(newMode);
+    // Sync preference change
+    if (user.googleSheetId) {
+      googleSheetService.saveAppSettings(user.googleSheetId, user.pin, categories, newMode).catch(console.error);
     }
   };
 
@@ -245,11 +355,12 @@ function App() {
                           user={user} 
                           categories={categories}
                           darkMode={darkMode}
-                          toggleTheme={() => setDarkMode(!darkMode)}
+                          toggleTheme={toggleThemeHandler}
                           onAddCategory={handleAddCategory}
                           onDeleteCategory={handleDeleteCategory}
                           updateUser={handleUpdateProfile}
                           onImportTransactions={handleImportTransactions}
+                          onSyncSettings={(id) => handleSyncSettings(id, darkMode)}
                           addToast={addToast}
                         />
                       </div>

@@ -15,6 +15,7 @@ interface SettingsProps {
   onDeleteCategory: (id: string) => void;
   updateUser: (user: Partial<UserProfile>) => void;
   onImportTransactions: (txs: Transaction[]) => void;
+  onSyncSettings: (sheetId: string) => Promise<boolean>;
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
 
@@ -56,7 +57,7 @@ const AccordionItem = ({ title, icon: Icon, subtext, isOpen, onToggle, children 
 };
 
 const Settings: React.FC<SettingsProps> = ({ 
-  user, categories, darkMode, toggleTheme, onAddCategory, onDeleteCategory, updateUser, onImportTransactions, addToast
+  user, categories, darkMode, toggleTheme, onAddCategory, onDeleteCategory, updateUser, onImportTransactions, onSyncSettings, addToast
 }) => {
   const { t, language, setLanguage } = useLanguage();
   
@@ -249,6 +250,9 @@ const Settings: React.FC<SettingsProps> = ({
         `EZFin Tracker - ${user.name}`, 
         selectedFolder?.id
       );
+      // Immediately save current settings to the new sheet
+      await onSyncSettings(sheet.id);
+      
       updateUser({ googleSheetId: sheet.id, googleSheetName: sheet.name });
       setShowSheetModal(false);
       addToast("New Spreadsheet Created!", "success");
@@ -259,10 +263,22 @@ const Settings: React.FC<SettingsProps> = ({
     }
   };
 
-  const handleSelectSheet = (sheet: {id: string, name: string}) => {
-    updateUser({ googleSheetId: sheet.id, googleSheetName: sheet.name });
-    setShowSheetModal(false);
-    addToast("Spreadsheet Linked!", "success");
+  const handleSelectSheet = async (sheet: {id: string, name: string}) => {
+    setIsGoogleLoading(true);
+    try {
+        // First try to fetch/sync settings from the sheet
+        await onSyncSettings(sheet.id);
+        
+        // Then update the user profile with the sheet ID
+        updateUser({ googleSheetId: sheet.id, googleSheetName: sheet.name });
+        
+        setShowSheetModal(false);
+        addToast("Spreadsheet Linked!", "success");
+    } catch(e) {
+        addToast("Failed to link spreadsheet", "error");
+    } finally {
+        setIsGoogleLoading(false);
+    }
   };
 
   const handleSyncFromCloud = async () => {
@@ -271,6 +287,9 @@ const Settings: React.FC<SettingsProps> = ({
     try {
       const txs = await googleSheetService.fetchTransactions(user.googleSheetId);
       onImportTransactions(txs);
+      
+      // Also sync settings
+      await onSyncSettings(user.googleSheetId);
     } catch (e) {
       console.error(e);
       addToast("Failed to import data. Ensure you are signed in.", "error");

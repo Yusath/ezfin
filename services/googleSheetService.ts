@@ -1,4 +1,4 @@
-import { Transaction, TransactionItem } from "../types";
+import { Transaction, TransactionItem, Category } from "../types";
 
 declare global {
   interface Window {
@@ -322,6 +322,37 @@ export const googleSheetService = {
     }
   },
 
+  bulkAppendTransactions: async (spreadsheetId: string, transactions: Transaction[]) => {
+    if (!accessToken && window.gapi?.client?.getToken() === null) return;
+    
+    const rows = transactions.map(tx => {
+      const itemDetails = tx.items.map(i => `${i.qty}x ${i.name} (@${i.price})`).join(", ");
+      return [
+        tx.id,
+        tx.date, 
+        tx.storeName,
+        tx.category,
+        tx.type,
+        tx.totalAmount,
+        itemDetails
+      ];
+    });
+
+    try {
+      await window.gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: spreadsheetId,
+        range: 'Sheet1!A1',
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+          values: rows,
+        },
+      });
+    } catch (error) {
+      console.error("Error bulk appending", error);
+      throw error;
+    }
+  },
+
   searchSpreadsheets: async (query: string): Promise<Array<{id: string, name: string}>> => {
     try {
         const response = await window.gapi.client.drive.files.list({
@@ -394,5 +425,78 @@ export const googleSheetService = {
       console.error("Fetch transactions failed", error);
       throw error;
     }
+  },
+
+  // --- SETTINGS SYNC (PIN & Categories & Theme) ---
+
+  ensureSettingsSheet: async (spreadsheetId: string) => {
+    try {
+      const meta = await window.gapi.client.sheets.spreadsheets.get({
+          spreadsheetId,
+          fields: 'sheets.properties.title'
+      });
+      const exists = meta.result.sheets.some((s: any) => s.properties.title === 'Settings');
+      if (!exists) {
+          await window.gapi.client.sheets.spreadsheets.batchUpdate({
+              spreadsheetId,
+              resource: {
+                  requests: [{ addSheet: { properties: { title: 'Settings', hidden: true } } }]
+              }
+          });
+          // Initialize headers
+           await window.gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId,
+              range: 'Settings!A1:C1',
+              valueInputOption: 'RAW',
+              resource: { values: [['PIN', 'CATEGORIES', 'DARK_MODE']] }
+          });
+      }
+    } catch (e) {
+      console.error("Failed to ensure settings sheet", e);
+    }
+  },
+
+  saveAppSettings: async (spreadsheetId: string, pin: string, categories: Category[], darkMode: boolean) => {
+      try {
+        await googleSheetService.ensureSettingsSheet(spreadsheetId);
+        await window.gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId,
+            range: 'Settings!A2:C2',
+            valueInputOption: 'RAW',
+            resource: { values: [[pin, JSON.stringify(categories), darkMode.toString()]] }
+        });
+      } catch (e) {
+        console.error("Failed to save app settings", e);
+      }
+  },
+
+  fetchAppSettings: async (spreadsheetId: string): Promise<{ pin?: string, categories?: Category[], darkMode?: boolean } | null> => {
+      try {
+          const response = await window.gapi.client.sheets.spreadsheets.values.get({
+              spreadsheetId,
+              range: 'Settings!A2:C2'
+          });
+          const rows = response.result.values;
+          if (!rows || rows.length === 0) return null;
+          
+          let cats = [];
+          try {
+             cats = JSON.parse(rows[0][1] || '[]');
+          } catch(e) {}
+
+          let darkMode = false;
+          if (rows[0][2]) {
+             darkMode = rows[0][2] === 'true';
+          }
+
+          return {
+              pin: rows[0][0],
+              categories: cats,
+              darkMode: darkMode
+          };
+      } catch (e) {
+          console.warn("Settings sheet missing or empty", e);
+          return null;
+      }
   }
 };

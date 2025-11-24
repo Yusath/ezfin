@@ -1,7 +1,6 @@
 {
   "name": "ezfin-student",
-  "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,21 +9,22 @@
   },
   "dependencies": {
     "@google/genai": "^1.30.0",
-    "lucide-react": "^0.554.0",
-    "react-router-dom": "^7.9.6",
     "date-fns": "^4.1.0",
-    "react-dom": "^19.2.0",
-    "react": "^19.2.0",
-    "recharts": "^3.4.1",
-    "tesseract.js": "5.0.5",
-    "xlsx": "latest",
-    "jspdf": "2.5.1",
-    "jspdf-autotable": "3.8.2"
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.8.2",
+    "lucide-react": "^0.344.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.3",
+    "recharts": "^2.12.2",
+    "tesseract.js": "^5.0.5",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "@types/react": "^18.2.64",
+    "@types/react-dom": "^18.2.21",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.1.6"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "EZFin Student",
+  "name": "EZFin AutoMate",
   "description": "A premium, student-focused personal finance manager with smart receipt scanning and AI advisory.",
   "requestFramePermissions": [
     "camera"

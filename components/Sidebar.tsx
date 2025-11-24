@@ -32,7 +32,7 @@ const Sidebar: React.FC = () => {
         </div>
         <div>
           <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">EZFin</h1>
-          <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">Student</p>
+          <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">AutoMate</p>
         </div>
       </div>
 

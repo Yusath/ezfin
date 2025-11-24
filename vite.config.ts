@@ -13,8 +13,9 @@ export default defineConfig(({ mode }) => {
       outDir: 'build',
     },
     define: {
-      // Expose API_KEY to the client-side code safely
+      // Expose Keys to the client-side code safely
       'process.env.API_KEY': JSON.stringify(env.API_KEY),
+      'process.env.GOOGLE_CLIENT_ID': JSON.stringify(env.GOOGLE_CLIENT_ID),
       // Polyfill process.env to avoid crashes in some libs
       'process.env': {}
     }

@@ -1,6 +1,6 @@
 import { Transaction, UserProfile } from "../types";
 import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const formatCurrency = (amount: number) => {
@@ -15,162 +15,233 @@ const formatDate = (dateString: string) => {
 
 export const exportService = {
   
-  toExcel: (transactions: Transaction[], user: UserProfile) => {
-    // 1. Prepare Data
-    const rows = transactions.map(tx => ({
+  toExcel: (transactions: Transaction[], user: UserProfile, periodLabel: string) => {
+    // 1. Split Data
+    const incomes = transactions.filter(t => t.type === 'income');
+    const expenses = transactions.filter(t => t.type === 'expense');
+
+    const mapToRow = (tx: Transaction) => ({
       Date: formatDate(tx.date),
       Store: tx.storeName,
       Category: tx.category,
-      Type: tx.type === 'expense' ? 'Pengeluaran' : 'Pemasukan',
       Amount: tx.totalAmount,
       Items: tx.items.map(i => `${i.qty}x ${i.name}`).join(', ')
-    }));
-
-    // 2. Create Sheet
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    
-    // Adjust Column Widths
-    const wscols = [
-      { wch: 25 }, // Date
-      { wch: 20 }, // Store
-      { wch: 15 }, // Category
-      { wch: 12 }, // Type
-      { wch: 15 }, // Amount
-      { wch: 40 }  // Items
-    ];
-    worksheet['!cols'] = wscols;
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
-
-    // 3. Save
-    XLSX.writeFile(workbook, `EZFin_Report_${user.name.replace(/\s+/g, '_')}.xlsx`);
-  },
-
-  toPDF: (transactions: Transaction[], user: UserProfile) => {
-    const doc = new jsPDF();
-
-    // Header
-    doc.setFontSize(20);
-    doc.setTextColor(0, 122, 255); // Blue
-    doc.text("EZFin Financial Report", 14, 22);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Generated for: ${user.name}`, 14, 28);
-    doc.text(`Date: ${new Date().toLocaleDateString('id-ID')}`, 14, 33);
-
-    // Summary Calculation
-    const totalIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.totalAmount, 0);
-    const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.totalAmount, 0);
-    const balance = totalIncome - totalExpense;
-
-    // Summary Table
-    autoTable(doc, {
-      startY: 40,
-      head: [['Metric', 'Amount']],
-      body: [
-        ['Total Income', formatCurrency(totalIncome)],
-        ['Total Expense', formatCurrency(totalExpense)],
-        ['Net Balance', formatCurrency(balance)]
-      ],
-      theme: 'plain',
-      styles: { fontSize: 10, cellPadding: 2 },
-      columnStyles: { 0: { fontStyle: 'bold' } }
     });
 
-    // Main Transaction Table
-    const tableRows = transactions.map(tx => [
-      formatDate(tx.date),
-      tx.storeName,
-      tx.category,
-      tx.type === 'income' ? '+' : '-',
-      formatCurrency(tx.totalAmount)
+    // 2. Calculate Totals
+    const totalIncome = incomes.reduce((s, t) => s + t.totalAmount, 0);
+    const totalExpense = expenses.reduce((s, t) => s + t.totalAmount, 0);
+    const profitLoss = totalIncome - totalExpense;
+
+    // 3. Build Sheet with Multiple Tables
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      [`EZFin Report: ${periodLabel}`],
+      [`User: ${user.name}`],
+      [""], // Spacer
+      ["PEMASUKAN (INCOME)"],
     ]);
 
-    autoTable(doc, {
-      startY: (doc as any).lastAutoTable.finalY + 10,
-      head: [['Date', 'Store', 'Category', 'Type', 'Amount']],
-      body: tableRows,
-      headStyles: { fillColor: [0, 122, 255] },
-      alternateRowStyles: { fillColor: [245, 245, 247] },
-      styles: { fontSize: 8 },
-    });
+    // Append Income Header & Data
+    XLSX.utils.sheet_add_json(worksheet, incomes.map(mapToRow), { origin: "A5" });
 
-    doc.save(`EZFin_Report.pdf`);
+    // Calculate start row for Expenses (Header + Income rows + Gap)
+    const expenseStartRow = 5 + (incomes.length > 0 ? incomes.length + 1 : 2) + 2; 
+    
+    XLSX.utils.sheet_add_aoa(worksheet, [["PENGELUARAN (EXPENSE)"]], { origin: `A${expenseStartRow}` });
+    XLSX.utils.sheet_add_json(worksheet, expenses.map(mapToRow), { origin: `A${expenseStartRow + 1}` });
+
+    // Calculate start row for Summary
+    const summaryStartRow = expenseStartRow + 1 + (expenses.length > 0 ? expenses.length + 1 : 2) + 2;
+
+    XLSX.utils.sheet_add_aoa(worksheet, [
+      ["RINGKASAN (SUMMARY)"],
+      ["Total Pemasukan", totalIncome],
+      ["Total Pengeluaran", totalExpense],
+      ["UNTUNG / RUGI", profitLoss]
+    ], { origin: `A${summaryStartRow}` });
+
+    // Formatting widths
+    worksheet['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 40 }];
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Keuangan");
+    XLSX.writeFile(workbook, `EZFin_Report_${user.name.split(' ')[0]}_${new Date().toISOString().split('T')[0]}.xlsx`);
   },
 
-  toDocx: (transactions: Transaction[], user: UserProfile) => {
-    // Generating a proper .docx in browser without heavy libraries involves
-    // creating a specific XML structure or simpler: HTML-to-Doc mime type.
-    // This method is robust for simple tables.
+  toPDF: (transactions: Transaction[], user: UserProfile, periodLabel: string) => {
+    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
 
-    const totalIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.totalAmount, 0);
-    const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.totalAmount, 0);
+    // Split Data
+    const incomes = transactions.filter(t => t.type === 'income');
+    const expenses = transactions.filter(t => t.type === 'expense');
+    const totalIncome = incomes.reduce((s, t) => s + t.totalAmount, 0);
+    const totalExpense = expenses.reduce((s, t) => s + t.totalAmount, 0);
+    const profitLoss = totalIncome - totalExpense;
+
+    // --- Header ---
+    doc.setFontSize(18);
+    doc.setTextColor(0, 122, 255);
+    doc.text("Laporan Keuangan EZFin", 14, 20);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(60);
+    doc.text(`Periode: ${periodLabel}`, 14, 27);
+    doc.text(`Dibuat oleh: ${user.name}`, 14, 32);
+
+    let finalY = 40;
+
+    // --- Table 1: Incomes ---
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text("1. PEMASUKAN", 14, finalY);
+    
+    if (incomes.length > 0) {
+      autoTable(doc, {
+        startY: finalY + 3,
+        head: [['Tanggal', 'Sumber', 'Kategori', 'Jumlah']],
+        body: incomes.map(tx => [formatDate(tx.date), tx.storeName, tx.category, formatCurrency(tx.totalAmount)]),
+        headStyles: { fillColor: [34, 197, 94] }, // Green
+        styles: { fontSize: 9 },
+      });
+      finalY = (doc as any).lastAutoTable.finalY + 15;
+    } else {
+      doc.setFontSize(10);
+      doc.setTextColor(150);
+      doc.text("(Tidak ada data pemasukan)", 14, finalY + 8);
+      finalY += 20;
+    }
+
+    // --- Table 2: Expenses ---
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text("2. PENGELUARAN", 14, finalY);
+
+    if (expenses.length > 0) {
+      autoTable(doc, {
+        startY: finalY + 3,
+        head: [['Tanggal', 'Toko/Tempat', 'Kategori', 'Jumlah']],
+        body: expenses.map(tx => [formatDate(tx.date), tx.storeName, tx.category, formatCurrency(tx.totalAmount)]),
+        headStyles: { fillColor: [239, 68, 68] }, // Red
+        styles: { fontSize: 9 },
+      });
+      finalY = (doc as any).lastAutoTable.finalY + 15;
+    } else {
+      doc.setFontSize(10);
+      doc.setTextColor(150);
+      doc.text("(Tidak ada data pengeluaran)", 14, finalY + 8);
+      finalY += 20;
+    }
+
+    // --- Summary Section (Bottom) ---
+    // Check if we need a new page
+    if (finalY > 250) {
+        doc.addPage();
+        finalY = 20;
+    }
+
+    doc.setFillColor(245, 247, 250);
+    doc.rect(14, finalY, 180, 40, 'F');
+    
+    doc.setFontSize(12);
+    doc.setTextColor(0);
+    doc.text("RINGKASAN AKHIR", 20, finalY + 10);
+    
+    doc.setFontSize(10);
+    doc.text("Total Pemasukan:", 20, finalY + 20);
+    doc.text(formatCurrency(totalIncome), 100, finalY + 20);
+    
+    doc.text("Total Pengeluaran:", 20, finalY + 26);
+    doc.text(formatCurrency(totalExpense), 100, finalY + 26);
+    
+    // Profit Line
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("UNTUNG / RUGI:", 20, finalY + 35);
+    
+    doc.setTextColor(profitLoss >= 0 ? 34 : 239, profitLoss >= 0 ? 197 : 68, profitLoss >= 0 ? 94 : 68); // Green or Red
+    doc.text(formatCurrency(profitLoss), 100, finalY + 35);
+
+    doc.save(`Laporan_EZFin_${new Date().toISOString().slice(0,10)}.pdf`);
+  },
+
+  toDocx: (transactions: Transaction[], user: UserProfile, periodLabel: string) => {
+    // Split Data
+    const incomes = transactions.filter(t => t.type === 'income');
+    const expenses = transactions.filter(t => t.type === 'expense');
+    const totalIncome = incomes.reduce((s, t) => s + t.totalAmount, 0);
+    const totalExpense = expenses.reduce((s, t) => s + t.totalAmount, 0);
+    const profitLoss = totalIncome - totalExpense;
+
+    const generateTable = (data: Transaction[], color: string) => {
+        if (data.length === 0) return '<p><i>Tidak ada data.</i></p>';
+        return `
+        <table>
+          <thead>
+            <tr>
+              <th style="background-color:${color}">Tanggal</th>
+              <th style="background-color:${color}">Keterangan</th>
+              <th style="background-color:${color}">Kategori</th>
+              <th style="background-color:${color}" class="amount">Jumlah</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.map(tx => `
+              <tr>
+                <td>${formatDate(tx.date)}</td>
+                <td>${tx.storeName} <br/><small>${tx.items.map(i => i.name).join(', ')}</small></td>
+                <td>${tx.category}</td>
+                <td class="amount">${formatCurrency(tx.totalAmount)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>`;
+    };
 
     const htmlContent = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
         <meta charset="utf-8">
-        <title>Financial Report</title>
+        <title>Laporan Keuangan</title>
         <style>
-          body { font-family: 'Arial', sans-serif; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
-          th { background-color: #007AFF; color: white; }
+          body { font-family: 'Calibri', 'Arial', sans-serif; }
+          h1, h2, h3 { color: #333; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 11pt; }
+          th { color: white; }
           .amount { text-align: right; }
-          .header { margin-bottom: 20px; }
-          .summary { background: #f0f0f0; padding: 10px; border-radius: 8px; margin-bottom: 20px; }
+          .header { margin-bottom: 30px; border-bottom: 2px solid #007AFF; padding-bottom: 10px; }
+          .summary-box { background: #f8f9fa; border: 1px solid #ddd; padding: 15px; margin-top: 30px; }
+          .profit { color: ${profitLoss >= 0 ? 'green' : 'red'}; font-weight: bold; font-size: 14pt; }
         </style>
       </head>
       <body>
         <div class="header">
-          <h1>EZFin Report</h1>
+          <h1>Laporan Keuangan EZFin</h1>
           <p><strong>User:</strong> ${user.name}</p>
-          <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+          <p><strong>Periode:</strong> ${periodLabel}</p>
         </div>
 
-        <div class="summary">
-          <p><strong>Total Income:</strong> ${formatCurrency(totalIncome)}</p>
-          <p><strong>Total Expense:</strong> ${formatCurrency(totalExpense)}</p>
-          <p><strong>Net Balance:</strong> ${formatCurrency(totalIncome - totalExpense)}</p>
-        </div>
+        <h3>1. Pemasukan (Income)</h3>
+        ${generateTable(incomes, '#22c55e')}
 
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Store</th>
-              <th>Category</th>
-              <th>Type</th>
-              <th class="amount">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${transactions.map(tx => `
-              <tr>
-                <td>${formatDate(tx.date)}</td>
-                <td>${tx.storeName}</td>
-                <td>${tx.category}</td>
-                <td style="color:${tx.type === 'income' ? 'green' : 'red'}">${tx.type}</td>
-                <td class="amount">${formatCurrency(tx.totalAmount)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+        <h3>2. Pengeluaran (Expense)</h3>
+        ${generateTable(expenses, '#ef4444')}
+
+        <div class="summary-box">
+          <h3>Ringkasan Akhir</h3>
+          <p>Total Pemasukan: <strong>${formatCurrency(totalIncome)}</strong></p>
+          <p>Total Pengeluaran: <strong>${formatCurrency(totalExpense)}</strong></p>
+          <hr/>
+          <p>Untung / Rugi: <span class="profit">${formatCurrency(profitLoss)}</span></p>
+        </div>
       </body>
       </html>
     `;
 
-    const blob = new Blob(['\ufeff', htmlContent], {
-      type: 'application/msword'
-    });
-    
-    // Create download link
-    const url = URL.createObjectURL(blob);
+    const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' });
     const link = document.createElement('a');
-    link.href = url;
-    link.download = `EZFin_Report_${user.name}.doc`; // .doc opens correctly in Word/Docs
+    link.href = URL.createObjectURL(blob);
+    link.download = `Laporan_EZFin_${new Date().toISOString().slice(0,10)}.doc`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

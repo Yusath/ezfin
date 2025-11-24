@@ -114,6 +114,10 @@ export const googleSheetService = {
             throw (resp);
           }
           accessToken = resp.access_token;
+          // CRITICAL FIX: Manually set the token for GAPI
+          if (window.gapi && window.gapi.client) {
+            window.gapi.client.setToken(resp);
+          }
         },
       });
 
@@ -132,13 +136,22 @@ export const googleSheetService = {
       
       const promptSignIn = () => {
          if (!tokenClient) return reject("Google Token Client not ready");
+         
+         // Override callback to capture response for this specific request
          tokenClient.callback = (resp: any) => {
-            if (resp.error) reject(resp);
-            else {
+            if (resp.error) {
+                reject(resp);
+            } else {
                 accessToken = resp.access_token;
+                // CRITICAL FIX: Bind the token to GAPI client immediately
+                if (window.gapi && window.gapi.client) {
+                   window.gapi.client.setToken(resp);
+                }
                 resolve(resp.access_token);
             }
          };
+         
+         // Trigger the popup
          tokenClient.requestAccessToken({prompt: 'consent'});
       };
 
@@ -157,7 +170,7 @@ export const googleSheetService = {
     const token = window.gapi?.client?.getToken();
     if (token !== null) {
       window.google?.accounts?.oauth2?.revoke(token.access_token, () => {});
-      window.gapi?.client?.setToken(null);
+      window.gapi?.client?.setToken(null); // Clear GAPI token
       accessToken = null;
     }
   },
@@ -198,6 +211,10 @@ export const googleSheetService = {
 
   createSpreadsheet: async (title: string, folderId?: string): Promise<{ id: string, name: string }> => {
     try {
+      if (!accessToken && window.gapi?.client?.getToken() === null) {
+        throw new Error("No access token available. Please sign in.");
+      }
+
       // 1. Create Sheet (Initially in Root)
       const response = await window.gapi.client.sheets.spreadsheets.create({
         resource: {
@@ -271,7 +288,10 @@ export const googleSheetService = {
   },
 
   appendTransaction: async (spreadsheetId: string, tx: Transaction) => {
-    if (!accessToken) return;
+    if (!accessToken && window.gapi?.client?.getToken() === null) {
+        console.warn("Skipping sync: No access token");
+        return;
+    }
 
     // Format items string: "2x Burger (@20000), 1x Coke (@5000)"
     const itemDetails = tx.items.map(i => `${i.qty}x ${i.name} (@${i.price})`).join(", ");
@@ -317,7 +337,10 @@ export const googleSheetService = {
   },
 
   fetchTransactions: async (spreadsheetId: string): Promise<Transaction[]> => {
-    if (!accessToken) throw new Error("Not logged in");
+    // Check token existence
+    if (!accessToken && window.gapi?.client?.getToken() === null) {
+        throw new Error("Not logged in");
+    }
     
     try {
       const response = await window.gapi.client.sheets.spreadsheets.values.get({

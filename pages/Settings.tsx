@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Category, Transaction } from '../types';
-import { Moon, Shield, Trash2, Plus, Wifi, Cloud, FileSpreadsheet, LogOut, Loader2, ArrowRight, Download, Globe, FileText, Folder } from 'lucide-react';
+import { Moon, Shield, Trash2, Plus, Wifi, Cloud, FileSpreadsheet, LogOut, Loader2, ArrowRight, Download, Globe, FileText, Folder, Calendar, Clock } from 'lucide-react';
 import { googleSheetService } from '../services/googleSheetService';
 import { useLanguage } from '../contexts/LanguageContext';
 import { dbService } from '../services/db';
@@ -20,6 +20,8 @@ interface SettingsProps {
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
 
+type ExportPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
+
 const Settings: React.FC<SettingsProps> = ({ 
   user, categories, darkMode, toggleTheme, isOnlineScanEnabled, toggleOnlineScan, onAddCategory, onDeleteCategory, updateUser, onImportTransactions, addToast
 }) => {
@@ -35,6 +37,7 @@ const Settings: React.FC<SettingsProps> = ({
   // Modal States
   const [showExportModal, setShowExportModal] = useState(false);
   const [showSheetModal, setShowSheetModal] = useState(false);
+  const [exportPeriod, setExportPeriod] = useState<ExportPeriod>('monthly');
   
   // Google State
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -89,29 +92,67 @@ const Settings: React.FC<SettingsProps> = ({
   };
 
   // --- EXPORT ---
+  const filterTransactionsByPeriod = (txs: Transaction[], period: ExportPeriod): Transaction[] => {
+    const now = new Date();
+    return txs.filter(tx => {
+      const txDate = new Date(tx.date);
+      
+      switch (period) {
+        case 'daily':
+          return txDate.getDate() === now.getDate() && 
+                 txDate.getMonth() === now.getMonth() && 
+                 txDate.getFullYear() === now.getFullYear();
+        case 'weekly': {
+          // Check if within current week (starting Sunday) or last 7 days. 
+          // Using last 7 days for simplicity and utility.
+          const sevenDaysAgo = new Date();
+          sevenDaysAgo.setDate(now.getDate() - 7);
+          return txDate >= sevenDaysAgo && txDate <= now;
+        }
+        case 'monthly':
+          return txDate.getMonth() === now.getMonth() && 
+                 txDate.getFullYear() === now.getFullYear();
+        case 'yearly':
+          return txDate.getFullYear() === now.getFullYear();
+        default:
+          return true;
+      }
+    });
+  };
+
   const handleExport = (type: 'excel' | 'pdf' | 'docx') => {
-    if (allTransactions.length === 0) {
-      addToast('No data to export', 'error');
+    const filteredData = filterTransactionsByPeriod(allTransactions, exportPeriod);
+
+    if (filteredData.length === 0) {
+      addToast('Tidak ada data pada periode ini', 'info');
       return;
     }
     
+    // Create a label for the period
+    let periodLabel = '';
+    const now = new Date();
+    if (exportPeriod === 'daily') periodLabel = `Harian (${now.toLocaleDateString('id-ID')})`;
+    else if (exportPeriod === 'weekly') periodLabel = 'Mingguan (7 Hari Terakhir)';
+    else if (exportPeriod === 'monthly') periodLabel = `Bulanan (${now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })})`;
+    else if (exportPeriod === 'yearly') periodLabel = `Tahunan (${now.getFullYear()})`;
+
     try {
-      if (type === 'excel') exportService.toExcel(allTransactions, user);
-      else if (type === 'pdf') exportService.toPDF(allTransactions, user);
-      else if (type === 'docx') exportService.toDocx(allTransactions, user);
+      if (type === 'excel') exportService.toExcel(filteredData, user, periodLabel);
+      else if (type === 'pdf') exportService.toPDF(filteredData, user, periodLabel);
+      else if (type === 'docx') exportService.toDocx(filteredData, user, periodLabel);
       
-      addToast('Export downloaded', 'success');
+      addToast('Laporan berhasil diunduh', 'success');
       setShowExportModal(false);
     } catch (e) {
       console.error(e);
-      addToast('Export failed', 'error');
+      addToast('Gagal mengunduh laporan', 'error');
     }
   };
 
   // --- GOOGLE ---
   const handleConnectGoogle = async () => {
     if (!googleSheetService.isConfigured) {
-      addToast("System Error: Google Client ID is missing in environment.", "error");
+      addToast("System Error: Google Client ID is missing.", "error");
       return;
     }
 
@@ -126,7 +167,6 @@ const Settings: React.FC<SettingsProps> = ({
       });
       addToast("Signed in successfully!", 'success');
 
-      // After sign in, check if user already has a sheet configured
       if (!user.googleSheetId) {
         const sheets = await googleSheetService.searchSpreadsheets("EZFin");
         setFoundSheets(sheets || []);
@@ -243,7 +283,6 @@ const Settings: React.FC<SettingsProps> = ({
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide ml-4">{t('set.google')}</h2>
           <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl overflow-hidden shadow-sm p-5">
 
-            {/* Logged Out State */}
             {!user.googleEmail ? (
               <div className="flex flex-col items-center text-center space-y-4 py-2">
                 <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center text-primary mb-2">
@@ -265,10 +304,7 @@ const Settings: React.FC<SettingsProps> = ({
                 </button>
               </div>
             ) : (
-              /* Logged In State */
               <div className="space-y-6">
-                
-                {/* User Info */}
                 <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-4">
                    <div className="flex items-center gap-3">
                       <img src={user.googlePhotoUrl || user.avatarUrl} className="w-10 h-10 rounded-full border border-gray-100" />
@@ -282,7 +318,6 @@ const Settings: React.FC<SettingsProps> = ({
                    </button>
                 </div>
 
-                {/* Sheet Selection (Unlocked) */}
                 <div>
                   <h4 className="text-xs font-bold text-gray-400 uppercase mb-3">{t('set.sheet')}</h4>
                   {!user.googleSheetId ? (
@@ -330,8 +365,6 @@ const Settings: React.FC<SettingsProps> = ({
         <div className="space-y-2">
            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide ml-4">{t('set.pref')}</h2>
            <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl overflow-hidden shadow-sm">
-              
-              {/* Language Toggle */}
               <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
                  <div className="flex items-center gap-3">
                    <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center text-white">
@@ -340,22 +373,10 @@ const Settings: React.FC<SettingsProps> = ({
                    <span className="font-medium text-gray-900 dark:text-white">{t('set.lang')}</span>
                  </div>
                  <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-                    <button 
-                      onClick={() => setLanguage('id')}
-                      className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${language === 'id' ? 'bg-white dark:bg-gray-600 shadow-sm text-primary' : 'text-gray-400'}`}
-                    >
-                      ID
-                    </button>
-                    <button 
-                      onClick={() => setLanguage('en')}
-                      className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${language === 'en' ? 'bg-white dark:bg-gray-600 shadow-sm text-primary' : 'text-gray-400'}`}
-                    >
-                      EN
-                    </button>
+                    <button onClick={() => setLanguage('id')} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${language === 'id' ? 'bg-white dark:bg-gray-600 shadow-sm text-primary' : 'text-gray-400'}`}>ID</button>
+                    <button onClick={() => setLanguage('en')} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${language === 'en' ? 'bg-white dark:bg-gray-600 shadow-sm text-primary' : 'text-gray-400'}`}>EN</button>
                  </div>
               </div>
-
-              {/* Dark Mode */}
               <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
                  <div className="flex items-center gap-3">
                    <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white">
@@ -363,15 +384,10 @@ const Settings: React.FC<SettingsProps> = ({
                    </div>
                    <span className="font-medium text-gray-900 dark:text-white">{t('set.dark')}</span>
                  </div>
-                 <button 
-                  onClick={toggleTheme}
-                  className={`w-12 h-7 rounded-full transition-colors duration-200 relative ${darkMode ? 'bg-green-500' : 'bg-gray-300'}`}
-                 >
+                 <button onClick={toggleTheme} className={`w-12 h-7 rounded-full transition-colors duration-200 relative ${darkMode ? 'bg-green-500' : 'bg-gray-300'}`}>
                    <div className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-sm transition-transform duration-200 ${darkMode ? 'translate-x-5' : ''}`}></div>
                  </button>
               </div>
-
-              {/* Online Scan */}
               <div className="flex items-center justify-between p-4">
                  <div className="flex items-center gap-3">
                    <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center text-white">
@@ -382,14 +398,10 @@ const Settings: React.FC<SettingsProps> = ({
                      <span className="text-xs text-gray-500">{t('set.online.desc')}</span>
                    </div>
                  </div>
-                 <button 
-                  onClick={toggleOnlineScan}
-                  className={`w-12 h-7 rounded-full transition-colors duration-200 relative ${isOnlineScanEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
-                 >
+                 <button onClick={toggleOnlineScan} className={`w-12 h-7 rounded-full transition-colors duration-200 relative ${isOnlineScanEnabled ? 'bg-green-500' : 'bg-gray-300'}`}>
                    <div className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-sm transition-transform duration-200 ${isOnlineScanEnabled ? 'translate-x-5' : ''}`}></div>
                  </button>
               </div>
-
            </div>
         </div>
 
@@ -397,12 +409,10 @@ const Settings: React.FC<SettingsProps> = ({
         <div className="space-y-2">
            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide ml-4">{t('set.cats')}</h2>
            <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl overflow-hidden shadow-sm p-4">
-              
               <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 mb-4">
                  <button onClick={() => setCatTypeFilter('expense')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${catTypeFilter === 'expense' ? 'bg-white dark:bg-gray-600 shadow-sm' : 'text-gray-400'}`}>{t('add.expense')}</button>
                  <button onClick={() => setCatTypeFilter('income')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${catTypeFilter === 'income' ? 'bg-white dark:bg-gray-600 shadow-sm' : 'text-gray-400'}`}>{t('add.income')}</button>
               </div>
-
               <div className="space-y-1 max-h-48 overflow-y-auto no-scrollbar">
                 {filteredCategories.map(cat => (
                   <div key={cat.id} className="flex justify-between items-center py-2 px-2 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg">
@@ -414,22 +424,11 @@ const Settings: React.FC<SettingsProps> = ({
                   </div>
                 ))}
               </div>
-
               <div className="mt-4 flex gap-2 pt-4 border-t border-gray-100 dark:border-gray-800">
-                <input 
-                  value={newCatIcon} 
-                  onChange={e => setNewCatIcon(e.target.value)} 
-                  className="w-10 h-10 text-center bg-gray-100 dark:bg-gray-800 rounded-xl"
-                />
-                <input 
-                  value={newCatName} 
-                  onChange={e => setNewCatName(e.target.value)} 
-                  placeholder="New Category..." 
-                  className="flex-1 px-3 bg-gray-100 dark:bg-gray-800 rounded-xl text-sm"
-                />
+                <input value={newCatIcon} onChange={e => setNewCatIcon(e.target.value)} className="w-10 h-10 text-center bg-gray-100 dark:bg-gray-800 rounded-xl" />
+                <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="New Category..." className="flex-1 px-3 bg-gray-100 dark:bg-gray-800 rounded-xl text-sm" />
                 <button onClick={handleAddCategoryClick} className="w-10 h-10 bg-blue-500 text-white rounded-xl flex items-center justify-center"><Plus size={20}/></button>
               </div>
-
            </div>
         </div>
 
@@ -441,7 +440,6 @@ const Settings: React.FC<SettingsProps> = ({
                 <Shield size={24} />
               </div>
               <h3 className="font-bold text-gray-900 dark:text-white mb-4">{t('set.pin')}</h3>
-              
               <input 
                 value={newPin} 
                 onChange={e => {
@@ -453,12 +451,7 @@ const Settings: React.FC<SettingsProps> = ({
                 placeholder="Enter 6-digit New PIN"
                 className="w-full text-center text-xl tracking-widest bg-gray-100 dark:bg-gray-800 rounded-xl py-3 mb-4"
               />
-              
-              <button 
-                onClick={handleSavePinClick}
-                disabled={newPin.length !== 6}
-                className="w-full bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-50"
-              >
+              <button onClick={handleSavePinClick} disabled={newPin.length !== 6} className="w-full bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-50">
                 {t('set.updatePin')}
               </button>
            </div>
@@ -491,11 +484,32 @@ const Settings: React.FC<SettingsProps> = ({
         </div>
       )}
 
-      {/* Export Modal */}
+      {/* Export Modal with Period Selector */}
       {showExportModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in">
           <div className="bg-white dark:bg-[#1C1C1E] w-full max-w-sm rounded-[2rem] p-6 shadow-2xl">
-            <h3 className="text-xl font-bold text-center mb-6 dark:text-white">{t('set.export')}</h3>
+            <h3 className="text-xl font-bold text-center mb-2 dark:text-white">{t('set.export')}</h3>
+            <p className="text-center text-sm text-gray-400 mb-6">Pilih periode laporan</p>
+
+            {/* Time Range Selector */}
+            <div className="grid grid-cols-2 gap-2 mb-6">
+               {(['daily', 'weekly', 'monthly', 'yearly'] as const).map(period => (
+                 <button
+                   key={period}
+                   onClick={() => setExportPeriod(period)}
+                   className={`py-2 px-1 rounded-xl text-xs font-bold transition-all border-2 ${
+                     exportPeriod === period 
+                       ? 'border-primary bg-blue-50 dark:bg-blue-900/30 text-primary' 
+                       : 'border-transparent bg-gray-100 dark:bg-gray-800 text-gray-500'
+                   }`}
+                 >
+                   {period === 'daily' ? 'Hari Ini' : 
+                    period === 'weekly' ? 'Minggu Ini' : 
+                    period === 'monthly' ? 'Bulan Ini' : 'Tahun Ini'}
+                 </button>
+               ))}
+            </div>
+
             <div className="space-y-3">
               <button onClick={() => handleExport('excel')} className="w-full p-4 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-xl flex items-center gap-4 font-bold hover:bg-green-100 transition-colors">
                 <FileSpreadsheet size={24} /> Excel (.xlsx)
@@ -523,11 +537,8 @@ const Settings: React.FC<SettingsProps> = ({
             
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
               
-              {/* Option 1: Create New */}
               <div className="space-y-3">
                  <h4 className="text-xs font-bold text-gray-400 uppercase">Create New</h4>
-                 
-                 {/* Folder Selector */}
                  <div className="relative">
                    <div className="flex items-center gap-2 bg-gray-50 dark:bg-black/20 p-2 rounded-xl border border-gray-100 dark:border-gray-800">
                       <Folder size={18} className="text-gray-400 ml-2" />
@@ -544,7 +555,6 @@ const Settings: React.FC<SettingsProps> = ({
                         </div>
                       )}
                    </div>
-                   {/* Folder Results Dropdown */}
                    {foundFolders.length > 0 && !selectedFolder && (
                      <div className="absolute top-full left-0 right-0 bg-white dark:bg-gray-800 shadow-xl rounded-xl mt-1 z-10 max-h-32 overflow-y-auto border border-gray-100 dark:border-gray-700">
                         {foundFolders.map(f => (
@@ -576,7 +586,6 @@ const Settings: React.FC<SettingsProps> = ({
                 <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
               </div>
 
-              {/* Option 2: Select Existing */}
               <div className="space-y-2">
                 {foundSheets.length === 0 ? (
                   <p className="text-center text-xs text-gray-400 py-4">No matching sheets found.</p>

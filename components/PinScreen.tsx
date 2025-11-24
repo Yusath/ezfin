@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Lock } from 'lucide-react';
 
 interface PinScreenProps {
@@ -9,82 +9,93 @@ interface PinScreenProps {
 const PinScreen: React.FC<PinScreenProps> = ({ correctPin, onSuccess }) => {
   const [input, setInput] = useState('');
   const [isError, setIsError] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleNumberClick = (num: string) => {
-    if (input.length < 6) {
-      const newInput = input + num;
-      setInput(newInput);
-      
-      if (newInput.length === 6) {
-        verifyPin(newInput);
+  useEffect(() => {
+    // Focus automatically on mount with a slight delay to ensure UI is ready
+    const timer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    
+    // Ensure only numbers are entered
+    if (val && !/^\d+$/.test(val)) return;
+    
+    setInput(val);
+
+    if (val.length === 6) {
+      if (val === correctPin) {
+        // Small delay for visual feedback before unmounting
+        setTimeout(() => {
+          onSuccess();
+        }, 100);
+      } else {
+        setIsError(true);
+        if (navigator.vibrate) navigator.vibrate(200);
+        setTimeout(() => {
+          setInput('');
+          setIsError(false);
+        }, 500);
       }
     }
   };
 
-  const handleDelete = () => {
-    setInput(input.slice(0, -1));
-    setIsError(false);
-  };
-
-  const verifyPin = (enteredPin: string) => {
-    if (enteredPin === correctPin) {
-      onSuccess();
-    } else {
-      setIsError(true);
-      if (navigator.vibrate) navigator.vibrate(200); // Haptic feedback
-      setTimeout(() => {
-        setInput('');
-        setIsError(false);
-      }, 500);
-    }
+  // Ensure focus is kept on the input if user clicks anywhere on the screen
+  const handleContainerClick = () => {
+    inputRef.current?.focus();
   };
 
   return (
-    <div className="absolute inset-0 bg-primary dark:bg-dark z-50 flex flex-col items-center justify-center text-white p-6">
-      <div className="mb-8 flex flex-col items-center">
-        <div className="bg-white/20 p-4 rounded-full mb-4 backdrop-blur-md">
-          <Lock size={32} className="text-white" />
+    <div 
+      className="fixed inset-0 bg-primary dark:bg-dark z-[100] flex flex-col items-center justify-center text-white p-6 animate-ios-fade-in"
+      onClick={handleContainerClick}
+    >
+      <div className="flex flex-col items-center mb-10 transition-all duration-500">
+        <div className="bg-white/20 p-5 rounded-full mb-6 backdrop-blur-xl shadow-lg border border-white/10">
+          <Lock size={40} className="text-white drop-shadow-md" />
         </div>
-        <h1 className="text-2xl font-bold">EZFin Security</h1>
-        <p className="text-white/60 text-sm mt-2">Masukkan PIN Anda untuk masuk</p>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">EZFin Security</h1>
+        <p className="text-white/70 text-base font-medium">Masukkan 6-digit PIN Anda</p>
       </div>
 
-      {/* PIN Dots */}
-      <div className={`flex gap-4 mb-12 ${isError ? 'animate-shake' : ''}`}>
+      {/* 
+        Invisible Input covering the screen to capture taps and keystrokes 
+        This triggers the mobile keyboard naturally.
+      */}
+      <input
+        ref={inputRef}
+        type="tel" 
+        inputMode="numeric"
+        pattern="[0-9]*"
+        maxLength={6}
+        value={input}
+        onChange={handleChange}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-default"
+        autoFocus
+        autoComplete="off"
+      />
+
+      {/* Visual Dots Feedback */}
+      <div className={`flex gap-6 mb-8 relative pointer-events-none ${isError ? 'animate-shake' : ''}`}>
         {[...Array(6)].map((_, i) => (
           <div
             key={i}
-            className={`w-4 h-4 rounded-full transition-all duration-300 ${
-              i < input.length ? 'bg-white scale-110 shadow-[0_0_10px_rgba(255,255,255,0.8)]' : 'bg-white/20'
+            className={`w-4 h-4 rounded-full transition-all duration-300 border border-white/30 ${
+              i < input.length 
+                ? 'bg-white scale-125 shadow-[0_0_12px_rgba(255,255,255,0.8)] border-transparent' 
+                : 'bg-white/10 scale-100'
             }`}
           />
         ))}
       </div>
-
-      {/* Keypad */}
-      <div className="grid grid-cols-3 gap-x-8 gap-y-6 w-full max-w-xs">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-          <button
-            key={num}
-            onClick={() => handleNumberClick(num.toString())}
-            className="w-16 h-16 rounded-full text-2xl font-medium bg-white/10 hover:bg-white/20 transition active:scale-95 flex items-center justify-center backdrop-blur-sm"
-          >
-            {num}
-          </button>
-        ))}
-        <div className="w-16 h-16" /> {/* Spacer */}
-        <button
-          onClick={() => handleNumberClick('0')}
-          className="w-16 h-16 rounded-full text-2xl font-medium bg-white/10 hover:bg-white/20 transition active:scale-95 flex items-center justify-center backdrop-blur-sm"
-        >
-          0
-        </button>
-        <button
-          onClick={handleDelete}
-          className="w-16 h-16 rounded-full text-lg font-medium text-white/80 hover:text-white transition active:scale-95 flex items-center justify-center"
-        >
-          Hapus
-        </button>
+      
+      {/* Footer hint */}
+      <div className="absolute bottom-10 text-white/30 text-xs font-medium uppercase tracking-widest animate-pulse pointer-events-none">
+        Secured by EZFin
       </div>
     </div>
   );

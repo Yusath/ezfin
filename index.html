@@ -50,14 +50,6 @@
         border-bottom: 0.5px solid rgba(255, 255, 255, 0.05);
       }
       
-      .glass-card {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.2) 100%);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05);
-      }
-
       /* Hide number input arrows */
       input[type=number]::-webkit-inner-spin-button, 
       input[type=number]::-webkit-outer-spin-button { 
@@ -65,6 +57,61 @@
         margin: 0; 
       }
 
+      /* ========================================= */
+      /* iOS ANIMATION SYSTEM                      */
+      /* ========================================= */
+
+      :root {
+        --ios-ease: cubic-bezier(0.32, 0.72, 0, 1);
+      }
+
+      /* 1. Page Transition (Tab Switch) - Subtle Fade & Scale */
+      @keyframes iosTabFadeIn {
+        0% { opacity: 0; transform: scale(0.98); }
+        100% { opacity: 1; transform: scale(1); }
+      }
+      .page-transition {
+        animation: iosTabFadeIn 0.4s var(--ios-ease) forwards;
+        transform-origin: center top;
+      }
+
+      /* 2. Modal Slide Up (For Add Page) */
+      @keyframes iosModalSlideUp {
+        0% { transform: translateY(100%); opacity: 0; }
+        100% { transform: translateY(0); opacity: 1; }
+      }
+      .page-slide-up {
+        animation: iosModalSlideUp 0.5s var(--ios-ease) forwards;
+      }
+
+      /* 3. List Item Entry (Slide from Right) */
+      @keyframes iosListSlideIn {
+        from { opacity: 0; transform: translateX(20px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+      .animate-slide-in-right {
+        animation: iosListSlideIn 0.4s var(--ios-ease) forwards;
+      }
+
+      /* 4. Dropdown/Accordion Animation */
+      @keyframes accordionDown {
+        from { opacity: 0; transform: translateY(-8px); max-height: 0; }
+        to { opacity: 1; transform: translateY(0); max-height: 500px; }
+      }
+      .animate-accordion-down {
+        animation: accordionDown 0.3s var(--ios-ease) forwards;
+      }
+
+      /* 5. Tactile Touch Feedback (Active State) */
+      .ios-touch-target {
+        transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.2s ease;
+      }
+      .ios-touch-target:active {
+        transform: scale(0.96);
+        opacity: 0.9;
+      }
+      
+      /* 6. Shake Animation for Errors */
       @keyframes shake {
         0%, 100% { transform: translateX(0); }
         10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
@@ -73,7 +120,7 @@
       .animate-shake {
         animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
       }
-      
+
       /* iOS Safe Area Utilities */
       .pb-safe {
         padding-bottom: env(safe-area-inset-bottom);
@@ -101,6 +148,9 @@
             },
             fontFamily: {
               sans: ['SF Pro Display', '-apple-system', 'Inter', 'sans-serif'],
+            },
+            animation: {
+              'ios-fade': 'iosTabFadeIn 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards',
             }
           }
         }
@@ -116,7 +166,6 @@
     "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
     "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.6",
     "recharts": "https://aistudiocdn.com/recharts@^3.5.0",
-    "tesseract.js": "https://aistudiocdn.com/tesseract.js@^6.0.1",
     "xlsx": "https://aistudiocdn.com/xlsx@^0.18.5",
     "jspdf": "https://aistudiocdn.com/jspdf@^3.0.4",
     "jspdf-autotable": "https://aistudiocdn.com/jspdf-autotable@^5.0.2",

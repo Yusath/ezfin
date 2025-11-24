@@ -20,7 +20,6 @@ function App() {
   const [isAppLoading, setIsAppLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [isOnlineScanEnabled, setIsOnlineScanEnabled] = useState(true);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   
   // Data State
@@ -41,9 +40,6 @@ function App() {
         
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'dark') setDarkMode(true);
-
-        const savedScanMode = localStorage.getItem('onlineScan');
-        if (savedScanMode === 'false') setIsOnlineScanEnabled(false);
 
         // Init Google Service
         googleSheetService.initClient((success) => {
@@ -73,13 +69,6 @@ function App() {
   }, [darkMode]);
 
   // -- Handlers --
-  const toggleOnlineScan = () => {
-    const newVal = !isOnlineScanEnabled;
-    setIsOnlineScanEnabled(newVal);
-    localStorage.setItem('onlineScan', String(newVal));
-    addToast(newVal ? 'Mode Scan Online Diaktifkan' : 'Mode Scan Offline Diaktifkan', 'info');
-  };
-
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const id = Math.random().toString(36).substring(7);
     setToasts((prev) => [...prev, { id, message, type }]);
@@ -218,7 +207,6 @@ function App() {
                           categories={categories} 
                           onSave={handleAddTransaction} 
                           addToast={addToast}
-                          isOnlineScanEnabled={isOnlineScanEnabled}
                         />
                       </div>
                     } 
@@ -253,8 +241,6 @@ function App() {
                           categories={categories}
                           darkMode={darkMode}
                           toggleTheme={() => setDarkMode(!darkMode)}
-                          isOnlineScanEnabled={isOnlineScanEnabled}
-                          toggleOnlineScan={toggleOnlineScan}
                           onAddCategory={handleAddCategory}
                           onDeleteCategory={handleDeleteCategory}
                           updateUser={handleUpdateProfile}

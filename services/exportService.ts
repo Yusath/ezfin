@@ -20,13 +20,15 @@ export const exportService = {
     const incomes = transactions.filter(t => t.type === 'income');
     const expenses = transactions.filter(t => t.type === 'expense');
 
-    const mapToRow = (tx: Transaction) => ({
-      Date: formatDate(tx.date),
-      Store: tx.storeName,
-      Category: tx.category,
-      Amount: tx.totalAmount,
-      Items: tx.items.map(i => `${i.qty}x ${i.name}`).join(', ')
-    });
+    const headers = ["Tanggal", "Tempat/Toko", "Kategori", "Jumlah", "Rincian Item"];
+
+    const mapToRowArray = (tx: Transaction) => [
+      formatDate(tx.date),
+      tx.storeName,
+      tx.category,
+      tx.totalAmount,
+      tx.items.map(i => `${i.qty}x ${i.name}`).join(', ')
+    ];
 
     // 2. Calculate Totals
     const totalIncome = incomes.reduce((s, t) => s + t.totalAmount, 0);
@@ -42,17 +44,32 @@ export const exportService = {
       ["PEMASUKAN (INCOME)"],
     ]);
 
-    // Append Income Header & Data
-    XLSX.utils.sheet_add_json(worksheet, incomes.map(mapToRow), { origin: "A5" });
+    // Income Section
+    const incomeStartRow = 5; // A5
+    XLSX.utils.sheet_add_aoa(worksheet, [headers], { origin: `A${incomeStartRow}` });
+    if (incomes.length > 0) {
+      XLSX.utils.sheet_add_aoa(worksheet, incomes.map(mapToRowArray), { origin: `A${incomeStartRow + 1}` });
+    } else {
+      XLSX.utils.sheet_add_aoa(worksheet, [["(Tidak ada data pemasukan)"]], { origin: `A${incomeStartRow + 1}` });
+    }
 
-    // Calculate start row for Expenses (Header + Income rows + Gap)
-    const expenseStartRow = 5 + (incomes.length > 0 ? incomes.length + 1 : 2) + 2; 
+    // Expense Section
+    // Calculate start row: 5 (Start) + 1 (Header) + (Data Length or 1 for message) + 2 (Spacer)
+    const incomeRows = incomes.length > 0 ? incomes.length : 1;
+    const expenseStartRow = incomeStartRow + 1 + incomeRows + 2;
     
-    XLSX.utils.sheet_add_aoa(worksheet, [["PENGELUARAN (EXPENSE)"]], { origin: `A${expenseStartRow}` });
-    XLSX.utils.sheet_add_json(worksheet, expenses.map(mapToRow), { origin: `A${expenseStartRow + 1}` });
+    XLSX.utils.sheet_add_aoa(worksheet, [["PENGELUARAN (EXPENSE)"]], { origin: `A${expenseStartRow - 1}` });
+    XLSX.utils.sheet_add_aoa(worksheet, [headers], { origin: `A${expenseStartRow}` });
+    
+    if (expenses.length > 0) {
+      XLSX.utils.sheet_add_aoa(worksheet, expenses.map(mapToRowArray), { origin: `A${expenseStartRow + 1}` });
+    } else {
+      XLSX.utils.sheet_add_aoa(worksheet, [["(Tidak ada data pengeluaran)"]], { origin: `A${expenseStartRow + 1}` });
+    }
 
-    // Calculate start row for Summary
-    const summaryStartRow = expenseStartRow + 1 + (expenses.length > 0 ? expenses.length + 1 : 2) + 2;
+    // Summary Section
+    const expenseRows = expenses.length > 0 ? expenses.length : 1;
+    const summaryStartRow = expenseStartRow + 1 + expenseRows + 2;
 
     XLSX.utils.sheet_add_aoa(worksheet, [
       ["RINGKASAN (SUMMARY)"],

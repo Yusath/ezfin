@@ -42,7 +42,7 @@ const Stats: React.FC<StatsProps> = ({ transactions, user }) => {
   };
 
   return (
-    <div className="p-6 pb-24 min-h-screen space-y-6 bg-gray-50 dark:bg-dark">
+    <div className="p-6 pb-24 min-h-screen space-y-6 bg-gray-50 dark:bg-dark page-transition">
       <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">{t('stats.title')}</h1>
 
       {/* Pie Chart Card */}
@@ -85,7 +85,7 @@ const Stats: React.FC<StatsProps> = ({ transactions, user }) => {
          <h3 className="font-semibold mb-4 dark:text-white">{t('stats.details')}</h3>
          <div className="space-y-4">
             {chartData.sort((a, b) => b.value - a.value).map((item, idx) => (
-              <div key={item.name} className="flex justify-between items-center">
+              <div key={item.name} className="flex justify-between items-center animate-slide-in-right" style={{ animationDelay: `${idx * 0.1}s` }}>
                 <div className="flex items-center gap-2">
                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
                    <span className="text-sm font-medium dark:text-gray-300">{item.name}</span>
@@ -99,7 +99,7 @@ const Stats: React.FC<StatsProps> = ({ transactions, user }) => {
       {/* AI Advisor Button */}
       <button
         onClick={handleAskAI}
-        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 rounded-2xl shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-3 hover:scale-[1.02] transition-transform"
+        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 rounded-2xl shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-3 ios-touch-target"
       >
         <Sparkles size={24} className="animate-pulse" />
         <div className="text-left">
@@ -111,13 +111,13 @@ const Stats: React.FC<StatsProps> = ({ transactions, user }) => {
       {/* AI Modal */}
       {isAdvisorOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4 w-full max-w-[480px] mx-auto left-0 right-0">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden page-slide-up">
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 flex justify-between items-center text-white">
               <div className="flex items-center gap-2">
                 <Bot size={24} />
                 <h3 className="font-bold">FinBot Advisor</h3>
               </div>
-              <button onClick={() => setIsAdvisorOpen(false)} className="hover:bg-white/20 p-1 rounded-full">
+              <button onClick={() => setIsAdvisorOpen(false)} className="hover:bg-white/20 p-1 rounded-full ios-touch-target">
                 <X size={20} />
               </button>
             </div>
@@ -129,7 +129,7 @@ const Stats: React.FC<StatsProps> = ({ transactions, user }) => {
                   <p className="text-sm text-gray-500 animate-pulse">Sedang menganalisis keuanganmu...</p>
                 </div>
               ) : (
-                <div className="prose dark:prose-invert text-sm">
+                <div className="prose dark:prose-invert text-sm animate-ios-fade-in">
                    <p className="whitespace-pre-line text-gray-700 dark:text-gray-300 leading-relaxed">
                      {advice}
                    </p>

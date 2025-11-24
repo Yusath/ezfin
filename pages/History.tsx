@@ -33,7 +33,7 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions }) => {
   });
 
   return (
-    <div className="pt-safe min-h-screen bg-[#F2F2F7] dark:bg-black animate-fade-in">
+    <div className="pt-safe min-h-screen bg-[#F2F2F7] dark:bg-black page-transition">
       {/* Title */}
       <div className="px-6 py-6 pb-2">
         <h1 className="text-3xl font-extrabold text-black dark:text-white tracking-tight">{t('hist.title')}</h1>
@@ -41,7 +41,7 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions }) => {
 
       {/* Search & Filter */}
       <div className="px-4 mb-4">
-        <div className="bg-white dark:bg-[#1C1C1E] rounded-xl p-2 flex items-center shadow-sm mb-4">
+        <div className="bg-white dark:bg-[#1C1C1E] rounded-xl p-2 flex items-center shadow-sm mb-4 ios-touch-target">
            <Search className="text-gray-400 ml-2" size={18} />
            <input 
              value={searchTerm}
@@ -56,7 +56,7 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions }) => {
              <button
                key={f}
                onClick={() => setFilter(f as any)}
-               className={`px-4 py-1.5 rounded-full text-xs font-bold capitalize transition-all ${filter === f ? 'bg-primary text-white shadow-md' : 'bg-white dark:bg-[#1C1C1E] text-gray-500'}`}
+               className={`px-4 py-1.5 rounded-full text-xs font-bold capitalize transition-all ios-touch-target ${filter === f ? 'bg-primary text-white shadow-md' : 'bg-white dark:bg-[#1C1C1E] text-gray-500'}`}
              >
                {f === 'all' ? t('hist.filter.all') : f === 'expense' ? t('add.expense') : t('add.income')}
              </button>
@@ -66,13 +66,13 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions }) => {
 
       {/* List */}
       <div className="px-4 pb-32 space-y-6">
-        {Object.entries(groupedTransactions).map(([date, txs]) => (
-          <div key={date}>
+        {Object.entries(groupedTransactions).map(([date, txs], groupIdx) => (
+          <div key={date} className="animate-slide-in-right" style={{ animationDelay: `${groupIdx * 0.05}s` }}>
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide ml-2 mb-2">{date}</h3>
             <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl overflow-hidden shadow-sm">
               {txs.map((tx, idx) => (
                 <div key={tx.id}>
-                  <div className="p-4 flex items-center justify-between active:bg-gray-50 dark:active:bg-gray-800 transition-colors">
+                  <div className="p-4 flex items-center justify-between active:bg-gray-50 dark:active:bg-gray-800 transition-colors ios-touch-target">
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${tx.type === 'income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
                         {tx.type === 'income' ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}

@@ -19,6 +19,7 @@ interface SettingsProps {
   onImportTransactions: (txs: Transaction[]) => void;
   onSyncSettings: (sheetId: string) => Promise<boolean>;
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void;
+  onGoogleSessionError: () => void;
 }
 
 type ExportPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
@@ -74,7 +75,7 @@ const AccordionItem = ({ title, icon: Icon, subtext, isOpen, onToggle, children 
 };
 
 const Settings: React.FC<SettingsProps> = ({ 
-  user, categories, darkMode, toggleTheme, onAddCategory, onDeleteCategory, updateUser, onImportTransactions, onSyncSettings, addToast
+  user, categories, darkMode, toggleTheme, onAddCategory, onDeleteCategory, updateUser, onImportTransactions, onSyncSettings, addToast, onGoogleSessionError
 }) => {
   const { t, language, setLanguage } = useLanguage();
   const [openSection, setOpenSection] = useState<SettingsSection>(null);
@@ -262,8 +263,12 @@ const Settings: React.FC<SettingsProps> = ({
         const sheets = await googleSheetService.searchSpreadsheets("EZFin");
         setFoundSheets(sheets || []);
         setShowSheetModal(true);
-     } catch (e) {
-       addToast("Failed to fetch sheets", "error");
+     } catch (e: any) {
+       if (e.message === 'UNAUTHENTICATED') {
+         onGoogleSessionError();
+       } else {
+         addToast("Failed to fetch sheets", "error");
+       }
      } finally {
        setIsGoogleLoading(false);
      }
@@ -272,8 +277,14 @@ const Settings: React.FC<SettingsProps> = ({
   const handleSearchFolder = async (q: string) => {
     setFolderQuery(q);
     if (q.length > 2) {
-      const folders = await googleSheetService.searchFolders(q);
-      setFoundFolders(folders || []);
+      try {
+         const folders = await googleSheetService.searchFolders(q);
+         setFoundFolders(folders || []);
+      } catch (e: any) {
+         if (e.message === 'UNAUTHENTICATED') {
+            onGoogleSessionError();
+         }
+      }
     } else {
       setFoundFolders([]);
     }
@@ -293,8 +304,12 @@ const Settings: React.FC<SettingsProps> = ({
       setShowSheetModal(false);
       setNewSheetNameSuffix('');
       addToast("New Spreadsheet Created!", "success");
-    } catch (e) {
-      addToast("Failed to create sheet", "error");
+    } catch (e: any) {
+      if (e.message === 'UNAUTHENTICATED') {
+         onGoogleSessionError();
+      } else {
+         addToast("Failed to create sheet", "error");
+      }
     } finally {
       setIsGoogleLoading(false);
     }
@@ -307,8 +322,12 @@ const Settings: React.FC<SettingsProps> = ({
         updateUser({ googleSheetId: sheet.id, googleSheetName: sheet.name });
         setShowSheetModal(false);
         addToast("Spreadsheet Linked!", "success");
-    } catch(e) {
-        addToast("Failed to link spreadsheet", "error");
+    } catch(e: any) {
+        if (e.message === 'UNAUTHENTICATED') {
+           onGoogleSessionError();
+        } else {
+           addToast("Failed to link spreadsheet", "error");
+        }
     } finally {
         setIsGoogleLoading(false);
     }
@@ -321,9 +340,13 @@ const Settings: React.FC<SettingsProps> = ({
       const txs = await googleSheetService.fetchTransactions(user.googleSheetId);
       onImportTransactions(txs);
       await onSyncSettings(user.googleSheetId);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      addToast("Failed to import data. Ensure you are signed in.", "error");
+      if (e.message === 'UNAUTHENTICATED') {
+         onGoogleSessionError();
+      } else {
+         addToast("Failed to import data.", "error");
+      }
     } finally {
       setIsGoogleLoading(false);
     }

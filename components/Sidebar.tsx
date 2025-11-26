@@ -1,10 +1,12 @@
 
-import React from 'react';
-import { Home, History, Plus, PieChart, Settings } from 'lucide-react';
+import React, { useState } from 'react';
+import { Home, History, Plus, PieChart, Settings, MessageSquare } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
+import FeedbackModal from './FeedbackModal';
 
 const Sidebar: React.FC = () => {
+  const [showFeedback, setShowFeedback] = useState(false);
   const location = useLocation();
   const isActive = (path: string) => location.pathname === path;
   const { t } = useLanguage();
@@ -24,40 +26,55 @@ const Sidebar: React.FC = () => {
   );
 
   return (
-    <aside className="w-64 h-full bg-white dark:bg-[#1C1C1E] border-r border-gray-200 dark:border-white/10 flex flex-col p-5 shadow-xl z-30">
-      
-      {/* Brand */}
-      <div className="flex items-center gap-3 mb-8 px-2">
-        <img 
-          src="https://i.ibb.co.com/KcRpsp15/Untitled-design.png" 
-          alt="EZFin Logo" 
-          className="w-10 h-10 rounded-xl shadow-md object-cover"
-        />
-        <div>
-          <h1 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">EZFin</h1>
-          <p className="text-[8px] font-medium text-gray-600 dark:text-gray-400 uppercase tracking-widest">AutoMate</p>
+    <>
+      <aside className="w-64 h-full bg-white dark:bg-[#1C1C1E] border-r border-gray-200 dark:border-white/10 flex flex-col p-5 shadow-xl z-30">
+        
+        {/* Brand */}
+        <div className="flex items-center gap-3 mb-8 px-2">
+          <img 
+            src="https://i.ibb.co.com/KcRpsp15/Untitled-design.png" 
+            alt="EZFin Logo" 
+            className="w-10 h-10 rounded-xl shadow-md object-cover"
+          />
+          <div>
+            <h1 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">EZFin</h1>
+            <p className="text-[8px] font-medium text-gray-600 dark:text-gray-400 uppercase tracking-widest">AutoMate</p>
+          </div>
         </div>
-      </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-1.5">
-        <NavItem to="/" icon={Home} label={t('nav.dashboard')} />
-        <NavItem to="/history" icon={History} label={t('nav.history')} />
-        <NavItem to="/stats" icon={PieChart} label={t('nav.stats')} />
-        <NavItem to="/settings" icon={Settings} label={t('nav.settings')} />
-      </nav>
+        {/* Navigation */}
+        <nav className="flex-1 space-y-1.5">
+          <NavItem to="/" icon={Home} label={t('nav.dashboard')} />
+          <NavItem to="/history" icon={History} label={t('nav.history')} />
+          <NavItem to="/stats" icon={PieChart} label={t('nav.stats')} />
+          <NavItem to="/settings" icon={Settings} label={t('nav.settings')} />
+        </nav>
 
-      {/* CTA Button */}
-      <div className="mt-auto pt-6">
-        <Link 
-          to="/add" 
-          className="flex items-center justify-center gap-2 w-full bg-black dark:bg-white dark:text-black text-white py-3 rounded-2xl font-bold shadow-lg active:scale-95 transition-all hover:opacity-90 text-sm"
-        >
-          <Plus size={18} />
-          <span>{t('nav.add')}</span>
-        </Link>
-      </div>
-    </aside>
+        {/* Feedback & CTA */}
+        <div className="mt-auto pt-6 space-y-3">
+          {/* Feedback Button */}
+          <button 
+            onClick={() => setShowFeedback(true)}
+            className="flex items-center gap-3 px-4 py-2.5 w-full rounded-xl transition-all duration-200 group border border-orange-400 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/10 active:scale-95 bg-transparent"
+          >
+            <MessageSquare size={18} className="group-hover:scale-110 transition-transform" />
+            <span className="font-semibold text-xs tracking-wide">Masukan & Saran</span>
+          </button>
+
+          {/* CTA Button */}
+          <Link 
+            to="/add" 
+            className="flex items-center justify-center gap-2 w-full bg-black dark:bg-white dark:text-black text-white py-3 rounded-2xl font-bold shadow-lg active:scale-95 transition-all hover:opacity-90 text-sm"
+          >
+            <Plus size={18} />
+            <span>{t('nav.add')}</span>
+          </Link>
+        </div>
+      </aside>
+
+      {/* Feedback Modal */}
+      {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
+    </>
   );
 };
 

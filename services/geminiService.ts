@@ -80,42 +80,45 @@ export const scanReceipt = async (file: File): Promise<any> => {
     const base64 = await fileToBase64(file);
     
     const prompt = `
-      You are an expert Indonesian Receipt Extraction Agent.
-      Analyze the image/document and extract transaction details into valid JSON.
+      You are an expert Indonesian Receipt Extraction Agent, specialized in Marketplace/Delivery apps (Shopee, GoFood, Grab, Tokopedia).
+      Analyze the image and extract details into valid JSON.
 
       CONTEXT:
       - Currency: Indonesian Rupiah (IDR).
-      - Number Format: "10.000" means 10000. "10,000" usually means 10. Ignore thousands separators (dots).
-      - If a store name is abbreviated, try to infer the full name (e.g., "Indomrt" -> "Indomaret").
+      - Ignore thousands separators (dots). "10.000" = 10000.
+      - If store name is abbreviated, infer full name.
 
       EXTRACTION TARGETS:
       1. Store Name (nama_toko)
       2. Transaction Date (tanggal) - Format YYYY-MM-DD
-      3. Items (daftar_barang):
-         - Name (nama)
-         - Quantity (jumlah) -> If missing, deduce from TotalPrice / UnitPrice. Default to 1.
-         - Unit Price (harga_satuan) -> If missing, deduce from TotalPrice / Quantity.
-         - Total Price (total_harga)
-      4. Grand Total (total_belanja)
+      3. Product Items (daftar_barang): Standard items.
+      4. **Additional Fees & Discounts (CRITICAL):**
+         - Subtotal (subtotal_produk) -> Sum of products only.
+         - Shipping Cost (ongkos_kirim/pengiriman)
+         - Service/Admin/App Fee (biaya_layanan/penanganan)
+         - Shipping Discount (diskon_ongkir/potongan_pengiriman) -> Extract as POSITIVE NUMBER.
+         - Voucher/Marketplace Discount (diskon_voucher/diskon_belanja) -> Extract as POSITIVE NUMBER.
+      5. Grand Total (total_pembayaran)
 
       JSON SCHEMA:
       {
         "store_name": "String",
         "transaction_date": "YYYY-MM-DD",
         "items": [
-          {
-            "name": "String",
-            "qty": Number,
-            "price": Number,
-            "total": Number
-          }
+          { "name": "String", "qty": Number, "price": Number, "total": Number }
         ],
+        "subtotal_products": Number,
+        "shipping_cost": Number,
+        "service_fee": Number,
+        "shipping_discount": Number,
+        "voucher_discount": Number,
         "grand_total": Number
       }
 
       RULES:
-      - Output ONLY raw JSON. No markdown formatting.
-      - Ensure all numbers are integers (no decimals).
+      - Output ONLY raw JSON. No markdown.
+      - Ensure all numbers are integers.
+      - If a field is not found (e.g. no discount), set to 0.
     `;
 
     const response = await ai.models.generateContent({

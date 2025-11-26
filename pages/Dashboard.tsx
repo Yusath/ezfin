@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Transaction, Category } from '../types';
-import { TrendingUp, TrendingDown, Wallet, X, Settings as SettingsIcon, LogIn, CheckCircle, RefreshCcw, PieChart, Activity, Plus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, X, Settings as SettingsIcon, LogIn, CheckCircle, RefreshCcw, PieChart, Activity, Plus, MessageSquare } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, CartesianGrid } from 'recharts';
 import { Link, useNavigate } from 'react-router-dom';
 import { googleSheetService } from '../services/googleSheetService';
 import { useLanguage } from '../contexts/LanguageContext';
+import FeedbackModal from '../components/FeedbackModal';
 
 interface DashboardProps {
   user: UserProfile;
@@ -19,6 +20,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
   const { t } = useLanguage();
   const [chartPeriod, setChartPeriod] = useState<'week' | 'month' | 'year'>('month');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
   
   // Local state for editing profile
   const [editName, setEditName] = useState(user.name);
@@ -212,13 +214,23 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
           </div>
         </button>
 
-        <Link 
-          to="/settings"
-          aria-label="Settings"
-          className="w-9 h-9 flex items-center justify-center rounded-full bg-white dark:bg-white/10 shadow-sm text-gray-600 dark:text-gray-300 ios-touch-target"
-        >
-           <SettingsIcon size={18} />
-        </Link>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setShowFeedback(true)}
+            aria-label="Feedback"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-500/30 shadow-sm ios-touch-target hover:bg-orange-100 transition-all active:scale-95"
+          >
+             <MessageSquare size={14} />
+             <span className="text-[10px] font-bold">Saran & Masukan</span>
+          </button>
+          <Link 
+            to="/settings"
+            aria-label="Settings"
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-white dark:bg-white/10 shadow-sm text-gray-600 dark:text-gray-300 ios-touch-target"
+          >
+             <SettingsIcon size={18} />
+          </Link>
+        </div>
       </div>
 
       {/* Header Desktop */}
@@ -505,6 +517,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
           </div>
         </div>
       )}
+
+      {/* Feedback Modal */}
+      {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
     </div>
   );
 };

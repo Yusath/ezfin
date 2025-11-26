@@ -157,6 +157,28 @@ function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
+  // Centralized Error Handler for Google Session
+  const handleGoogleSessionError = () => {
+    googleSheetService.signOut();
+    
+    setUser((prev) => {
+      // Avoid double processing if already cleared
+      if (!prev.googleEmail) return prev;
+
+      const updatedUser = { 
+        ...prev, 
+        googleEmail: undefined, 
+        googlePhotoUrl: undefined 
+        // We keep googleSheetId to allow easy reconnection, or could clear it too if desired.
+        // For now, clearing email indicates "Disconnected" to the UI.
+      };
+      
+      dbService.saveUser(updatedUser).catch(console.error);
+      addToast('Sesi Google berakhir. Mohon login ulang.', 'error');
+      return updatedUser;
+    });
+  };
+
   const handleAddTransaction = async (newTx: Transaction) => {
     try {
       // 1. Save Local
@@ -168,9 +190,9 @@ function App() {
         googleSheetService.appendTransaction(user.googleSheetId, newTx)
           .then(() => addToast('Transaction saved & synced to Drive!', 'success'))
           .catch((e) => {
-             console.error("Sync Error"); // Secure log
+             console.error("Sync Error");
              if (e.message === 'UNAUTHENTICATED') {
-               addToast('Sesi Google berakhir. Mohon login ulang di Settings.', 'error');
+               handleGoogleSessionError();
              } else {
                addToast('Saved locally, but Google Sync failed.', 'info');
              }
@@ -195,7 +217,11 @@ function App() {
           .then(() => addToast('Transaction updated & synced!', 'success'))
           .catch((e) => {
              console.error("Sync Edit Error");
-             addToast('Updated locally, but Google Sync failed.', 'info');
+             if (e.message === 'UNAUTHENTICATED') {
+               handleGoogleSessionError();
+             } else {
+               addToast('Updated locally, but Google Sync failed.', 'info');
+             }
           });
       } else {
         addToast('Transaksi berhasil diperbarui!', 'success');
@@ -219,7 +245,11 @@ function App() {
            .then(() => addToast(`${ids.length} Transaction(s) deleted.`, 'success'))
            .catch((e) => {
              console.error("Delete Sync Error");
-             addToast('Deleted locally, but Cloud sync failed.', 'info');
+             if (e.message === 'UNAUTHENTICATED') {
+               handleGoogleSessionError();
+             } else {
+               addToast('Deleted locally, but Cloud sync failed.', 'info');
+             }
            });
       } else {
         addToast('Transaksi berhasil dihapus!', 'success');
@@ -234,7 +264,6 @@ function App() {
     try {
       // Silent sync if just updating, toast only on explicit or significant events? 
       // User prompt implies "Auto-fetch", so keep it user-friendly.
-      // addToast('Syncing data from Cloud...', 'info'); 
       
       // 1. Sync Settings
       await handleSyncSettings(sheetId);
@@ -259,8 +288,7 @@ function App() {
     } catch (error: any) {
       console.error("Auto Sync Failed");
       if (error.message === 'UNAUTHENTICATED' || error.message === 'Not logged in') {
-         googleSheetService.signOut(); 
-         addToast('Sesi Google berakhir. Mohon login ulang di Settings.', 'error');
+         handleGoogleSessionError();
       }
     }
   };
@@ -325,6 +353,7 @@ function App() {
         if (e.message !== 'UNAUTHENTICATED') {
             // Suppress error toast for background syncs to avoid annoyance
         } else {
+            // Rethrow so callers (performFullCloudSync) can detect auth errors
             throw e;
         }
         return false;
@@ -502,6 +531,7 @@ function App() {
                           onImportTransactions={handleImportTransactions}
                           onSyncSettings={(id) => handleSyncSettings(id, darkMode)}
                           addToast={addToast}
+                          onGoogleSessionError={handleGoogleSessionError}
                         />
                       </div>
                     } 

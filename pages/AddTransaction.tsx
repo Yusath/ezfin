@@ -200,14 +200,59 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
       }
 
       const rawItems = data.items;
+      let newItems: TransactionItem[] = [];
+
+      // 1. Add Product Items
       if (rawItems && Array.isArray(rawItems) && rawItems.length > 0) {
-          setItems(rawItems.map((item: any) => ({
+          newItems = rawItems.map((item: any) => ({
               id: Math.random().toString(36).substring(7),
               name: item.name || "Item",
               qty: Number(item.qty) || Number(item.quantity) || 1,
               price: Number(item.price) || Number(item.unit_price) || 0
-          })));
-      } 
+          }));
+      }
+
+      // 2. Add Extra Fees as Items
+      if (data.shipping_cost > 0) {
+        newItems.push({
+          id: Math.random().toString(36).substring(7),
+          name: "Biaya Pengiriman",
+          qty: 1,
+          price: Number(data.shipping_cost)
+        });
+      }
+
+      if (data.service_fee > 0) {
+        newItems.push({
+          id: Math.random().toString(36).substring(7),
+          name: "Biaya Layanan",
+          qty: 1,
+          price: Number(data.service_fee)
+        });
+      }
+
+      // 3. Add Discounts as Negative Items
+      if (data.shipping_discount > 0) {
+        newItems.push({
+          id: Math.random().toString(36).substring(7),
+          name: "Diskon Pengiriman",
+          qty: 1,
+          price: -Math.abs(Number(data.shipping_discount)) // Ensure negative
+        });
+      }
+
+      if (data.voucher_discount > 0) {
+        newItems.push({
+          id: Math.random().toString(36).substring(7),
+          name: "Diskon Voucher",
+          qty: 1,
+          price: -Math.abs(Number(data.voucher_discount)) // Ensure negative
+        });
+      }
+
+      if (newItems.length > 0) {
+        setItems(newItems);
+      }
       
       if (data.store_name) autoCategorize(data.store_name);
   };
@@ -389,7 +434,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
                                 <span className="absolute left-3 top-2 text-xs text-gray-400 font-bold">Rp</span>
                                 <input 
                                    type="number"
-                                   className="w-full bg-white dark:bg-black/20 rounded-xl py-2 pl-9 pr-3 text-sm font-bold dark:text-white focus:outline-none border border-transparent focus:border-blue-500 shadow-sm"
+                                   className={`w-full bg-white dark:bg-black/20 rounded-xl py-2 pl-9 pr-3 text-sm font-bold dark:text-white focus:outline-none border border-transparent focus:border-blue-500 shadow-sm ${item.price < 0 ? 'text-red-500' : ''}`}
                                    placeholder="0"
                                    value={item.price}
                                    onChange={e => updateItem(item.id, 'price', e.target.value)}

@@ -1,9 +1,10 @@
 
 
+
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { Transaction, UserProfile, ToastMessage, Category } from './types';
-import { DEFAULT_USER_PROFILE } from './constants';
+import { DEFAULT_USER_PROFILE, APP_THEMES } from './constants';
 import { dbService } from './services/db';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
@@ -47,6 +48,11 @@ function App() {
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
     return saved !== 'light';
+  });
+  
+  // Theme Color State
+  const [themeColor, setThemeColor] = useState(() => {
+    return localStorage.getItem('theme_color') || 'blue';
   });
   
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -151,7 +157,7 @@ function App() {
     }
   }, [isAppLoading, isLocked, user.googleSheetId]);
 
-  // -- Theme Effect --
+  // -- Theme Mode Effect --
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -161,6 +167,22 @@ function App() {
       localStorage.setItem('theme', 'light');
     }
   }, [darkMode]);
+
+  // -- Theme Color Effect --
+  useEffect(() => {
+    const selectedTheme = APP_THEMES.find(t => t.id === themeColor) || APP_THEMES[0];
+    
+    // Helper to convert hex to RGB triplet for Tailwind opacity variables
+    const hexToRgb = (hex: string) => {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? 
+        `${parseInt(result[1], 16)} ${parseInt(result[2], 16)} ${parseInt(result[3], 16)}` 
+        : '0 122 255';
+    };
+
+    document.documentElement.style.setProperty('--primary-color', hexToRgb(selectedTheme.hex));
+    localStorage.setItem('theme_color', themeColor);
+  }, [themeColor]);
 
   // -- Handlers --
   const handleUnlock = () => {
@@ -332,7 +354,7 @@ function App() {
     }
   };
 
-  const handleSyncSettings = async (sheetId: string, currentThemeState: boolean = darkMode) => {
+  const handleSyncSettings = async (sheetId: string, currentThemeState: boolean = darkMode, currentThemeColor: string = themeColor) => {
     try {
         const cloudSettings = await googleSheetService.fetchAppSettings(sheetId);
         if (cloudSettings) {
@@ -363,10 +385,15 @@ function App() {
                setDarkMode(cloudSettings.darkMode);
                hasChanges = true;
             }
+            
+            if (cloudSettings.themeColor && cloudSettings.themeColor !== currentThemeColor) {
+                setThemeColor(cloudSettings.themeColor);
+                hasChanges = true;
+            }
 
             return true;
         } else {
-            await googleSheetService.saveAppSettings(sheetId, user.pin, categories, currentThemeState);
+            await googleSheetService.saveAppSettings(sheetId, user.pin, categories, currentThemeState, currentThemeColor);
             return false;
         }
     } catch (e: any) {
@@ -388,7 +415,7 @@ function App() {
       setUser(newUser);
       
       if (newUser.googleSheetId && (updatedUserPart.pin || updatedUserPart.name)) {
-         googleSheetService.saveAppSettings(newUser.googleSheetId, newUser.pin, categories, darkMode).catch(console.error);
+         googleSheetService.saveAppSettings(newUser.googleSheetId, newUser.pin, categories, darkMode, themeColor).catch(console.error);
       }
     } catch (error) {
       console.error(error);
@@ -404,7 +431,7 @@ function App() {
       addToast('Kategori ditambahkan', 'success');
 
       if (user.googleSheetId) {
-        googleSheetService.saveAppSettings(user.googleSheetId, user.pin, newCats, darkMode).catch(console.error);
+        googleSheetService.saveAppSettings(user.googleSheetId, user.pin, newCats, darkMode, themeColor).catch(console.error);
       }
     } catch (e) {
       addToast('Gagal simpan kategori', 'error');
@@ -419,7 +446,7 @@ function App() {
       addToast('Kategori dihapus', 'success');
 
       if (user.googleSheetId) {
-        googleSheetService.saveAppSettings(user.googleSheetId, user.pin, newCats, darkMode).catch(console.error);
+        googleSheetService.saveAppSettings(user.googleSheetId, user.pin, newCats, darkMode, themeColor).catch(console.error);
       }
     } catch (e) {
       addToast('Gagal hapus kategori', 'error');
@@ -430,7 +457,14 @@ function App() {
     const newMode = !darkMode;
     setDarkMode(newMode);
     if (user.googleSheetId) {
-      googleSheetService.saveAppSettings(user.googleSheetId, user.pin, categories, newMode).catch(console.error);
+      googleSheetService.saveAppSettings(user.googleSheetId, user.pin, categories, newMode, themeColor).catch(console.error);
+    }
+  };
+  
+  const changeThemeColorHandler = (color: string) => {
+    setThemeColor(color);
+    if (user.googleSheetId) {
+      googleSheetService.saveAppSettings(user.googleSheetId, user.pin, categories, darkMode, color).catch(console.error);
     }
   };
 
@@ -545,12 +579,14 @@ function App() {
                           user={user} 
                           categories={categories}
                           darkMode={darkMode}
+                          themeColor={themeColor}
                           toggleTheme={toggleThemeHandler}
+                          setThemeColor={changeThemeColorHandler}
                           onAddCategory={handleAddCategory}
                           onDeleteCategory={handleDeleteCategory}
                           updateUser={handleUpdateProfile}
                           onImportTransactions={handleImportTransactions}
-                          onSyncSettings={(id) => handleSyncSettings(id, darkMode)}
+                          onSyncSettings={(id) => handleSyncSettings(id, darkMode, themeColor)}
                           addToast={addToast}
                           onGoogleSessionError={handleGoogleSessionError}
                         />

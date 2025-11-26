@@ -19,3 +19,14 @@ export const DEFAULT_USER_PROFILE = {
   // SHA-256 Hash of '123456'
   pin: '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92'
 };
+
+export const APP_THEMES = [
+  { id: 'blue', name: 'Default Blue', hex: '#007AFF' },
+  { id: 'purple', name: 'Royal Purple', hex: '#AF52DE' },
+  { id: 'green', name: 'Fresh Green', hex: '#34C759' },
+  { id: 'orange', name: 'Sunset Orange', hex: '#FF9500' },
+  { id: 'pink', name: 'Hot Pink', hex: '#FF2D55' },
+  { id: 'teal', name: 'Ocean Teal', hex: '#30B0C7' },
+  { id: 'indigo', name: 'Indigo', hex: '#5856D6' },
+  { id: 'red', name: 'Red', hex: '#FF3B30' },
+];

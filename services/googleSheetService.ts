@@ -616,9 +616,9 @@ export const googleSheetService = {
           // Initialize headers
            await window.gapi.client.sheets.spreadsheets.values.update({
               spreadsheetId,
-              range: 'Settings!A1:C1',
+              range: 'Settings!A1:D1',
               valueInputOption: 'RAW',
-              resource: { values: [['PIN', 'CATEGORIES', 'DARK_MODE']] }
+              resource: { values: [['PIN', 'CATEGORIES', 'DARK_MODE', 'THEME_COLOR']] }
           });
       }
     } catch (e: any) {
@@ -627,14 +627,14 @@ export const googleSheetService = {
     }
   },
 
-  saveAppSettings: async (spreadsheetId: string, pin: string, categories: Category[], darkMode: boolean) => {
+  saveAppSettings: async (spreadsheetId: string, pin: string, categories: Category[], darkMode: boolean, themeColor: string = 'blue') => {
       try {
         await googleSheetService.ensureSettingsSheet(spreadsheetId);
         await window.gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId,
-            range: 'Settings!A2:C2',
+            range: 'Settings!A2:D2',
             valueInputOption: 'RAW',
-            resource: { values: [[pin, JSON.stringify(categories), darkMode.toString()]] }
+            resource: { values: [[pin, JSON.stringify(categories), darkMode.toString(), themeColor]] }
         });
       } catch (e: any) {
         console.error("Failed to save app settings");
@@ -642,11 +642,11 @@ export const googleSheetService = {
       }
   },
 
-  fetchAppSettings: async (spreadsheetId: string): Promise<{ pin?: string, categories?: Category[], darkMode?: boolean } | null> => {
+  fetchAppSettings: async (spreadsheetId: string): Promise<{ pin?: string, categories?: Category[], darkMode?: boolean, themeColor?: string } | null> => {
       try {
           const response = await window.gapi.client.sheets.spreadsheets.values.get({
               spreadsheetId,
-              range: 'Settings!A2:C2'
+              range: 'Settings!A2:D2'
           });
           const rows = response.result.values;
           if (!rows || rows.length === 0) return null;
@@ -660,11 +660,14 @@ export const googleSheetService = {
           if (rows[0][2]) {
              darkMode = rows[0][2] === 'true';
           }
+          
+          const themeColor = rows[0][3] || 'blue';
 
           return {
               pin: rows[0][0],
               categories: cats,
-              darkMode: darkMode
+              darkMode: darkMode,
+              themeColor: themeColor
           };
       } catch (e: any) {
           console.warn("Settings sheet missing or empty");

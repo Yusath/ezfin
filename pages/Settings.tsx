@@ -1,18 +1,23 @@
 
+
+
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Category, Transaction } from '../types';
-import { Moon, Shield, Trash2, Plus, Cloud, FileSpreadsheet, LogOut, Loader2, ArrowRight, Download, Globe, FileText, Folder, ChevronDown, Sliders, Tag, Lock, Check, AlertTriangle, Smile, X, Grid } from 'lucide-react';
+import { Moon, Shield, Trash2, Plus, Cloud, FileSpreadsheet, LogOut, Loader2, ArrowRight, Download, Globe, FileText, Folder, ChevronDown, Sliders, Tag, Lock, Check, AlertTriangle, Smile, X, Grid, Palette } from 'lucide-react';
 import { googleSheetService } from '../services/googleSheetService';
 import { useLanguage } from '../contexts/LanguageContext';
 import { dbService } from '../services/db';
 import { exportService } from '../services/exportService';
 import { hashPin } from '../utils/security';
+import { APP_THEMES } from '../constants';
 
 interface SettingsProps {
   user: UserProfile;
   categories: Category[];
   darkMode: boolean;
+  themeColor: string;
   toggleTheme: () => void;
+  setThemeColor: (color: string) => void;
   onAddCategory: (cat: Category) => void;
   onDeleteCategory: (id: string) => void;
   updateUser: (user: Partial<UserProfile>) => void;
@@ -75,7 +80,7 @@ const AccordionItem = ({ title, icon: Icon, subtext, isOpen, onToggle, children 
 };
 
 const Settings: React.FC<SettingsProps> = ({ 
-  user, categories, darkMode, toggleTheme, onAddCategory, onDeleteCategory, updateUser, onImportTransactions, onSyncSettings, addToast, onGoogleSessionError
+  user, categories, darkMode, themeColor, toggleTheme, setThemeColor, onAddCategory, onDeleteCategory, updateUser, onImportTransactions, onSyncSettings, addToast, onGoogleSessionError
 }) => {
   const { t, language, setLanguage } = useLanguage();
   const [openSection, setOpenSection] = useState<SettingsSection>(null);
@@ -482,7 +487,7 @@ const Settings: React.FC<SettingsProps> = ({
             isOpen={openSection === 'preferences'}
             onToggle={() => toggleSection('preferences')}
           >
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between p-2">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-xl bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center justify-center">
@@ -495,6 +500,7 @@ const Settings: React.FC<SettingsProps> = ({
                       <button onClick={() => setLanguage('en')} className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ios-touch-target ${language === 'en' ? 'bg-white dark:bg-gray-600 shadow-sm text-primary' : 'text-gray-500'}`}>EN</button>
                     </div>
                 </div>
+                
                 <div className="flex items-center justify-between p-2">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
@@ -505,6 +511,28 @@ const Settings: React.FC<SettingsProps> = ({
                     <button onClick={toggleTheme} aria-label="Toggle Theme" className={`w-12 h-7 rounded-full transition-colors duration-300 relative ios-touch-target ${darkMode ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
                       <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ${darkMode ? 'translate-x-5' : ''}`}></div>
                     </button>
+                </div>
+
+                <div className="p-2 border-t border-gray-100 dark:border-white/5 pt-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 rounded-xl bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 flex items-center justify-center">
+                        <Palette size={16} />
+                      </div>
+                      <span className="font-bold text-xs text-gray-900 dark:text-white">Theme Accent</span>
+                    </div>
+                    <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1 px-1">
+                      {APP_THEMES.map(theme => (
+                        <button
+                          key={theme.id}
+                          onClick={() => setThemeColor(theme.id)}
+                          aria-label={`Select ${theme.name} theme`}
+                          className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 transition-all ios-touch-target ${themeColor === theme.id ? 'border-gray-900 dark:border-white scale-110 shadow-sm' : 'border-transparent hover:scale-105'}`}
+                          style={{ backgroundColor: theme.hex }}
+                        >
+                          {themeColor === theme.id && <Check size={14} className="text-white" strokeWidth={3} />}
+                        </button>
+                      ))}
+                    </div>
                 </div>
               </div>
           </AccordionItem>

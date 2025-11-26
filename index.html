@@ -67,6 +67,8 @@
       :root {
         /* Slightly softer ease for slower animations */
         --ios-ease: cubic-bezier(0.25, 1, 0.5, 1); 
+        /* Default Primary RGB (Blue) - updated via JS */
+        --primary-color: 0 122 255;
       }
 
       /* 1. Page Transition (Tab Switch) - Subtle Fade & Scale */
@@ -154,7 +156,7 @@
         theme: {
           extend: {
             colors: {
-              primary: '#007AFF', // iOS Blue
+              primary: 'rgb(var(--primary-color) / <alpha-value>)', // Dynamic Primary
               secondary: '#34C759', // iOS Green
               accent: '#FF3B30', // iOS Red
               warning: '#FF9500', // iOS Orange

@@ -88,6 +88,7 @@ const Settings: React.FC<SettingsProps> = ({
   const [folderQuery, setFolderQuery] = useState('');
   const [foundFolders, setFoundFolders] = useState<Array<{id: string, name: string}>>([]);
   const [selectedFolder, setSelectedFolder] = useState<{id: string, name: string} | null>(null);
+  const [newSheetNameSuffix, setNewSheetNameSuffix] = useState(''); // Custom filename suffix
 
   useEffect(() => {
     // Load all transactions for Export
@@ -275,10 +276,14 @@ const Settings: React.FC<SettingsProps> = ({
   };
 
   const handleCreateSheet = async () => {
+    if (!newSheetNameSuffix.trim()) return;
+
     setIsGoogleLoading(true);
+    const fullName = `EZFin Tracker - ${newSheetNameSuffix.trim()}`;
+    
     try {
       const sheet = await googleSheetService.createSpreadsheet(
-        `EZFin Tracker - ${user.name}`, 
+        fullName, 
         selectedFolder?.id
       );
       // Immediately save current settings to the new sheet
@@ -286,6 +291,7 @@ const Settings: React.FC<SettingsProps> = ({
       
       updateUser({ googleSheetId: sheet.id, googleSheetName: sheet.name });
       setShowSheetModal(false);
+      setNewSheetNameSuffix(''); // Reset
       addToast("New Spreadsheet Created!", "success");
     } catch (e) {
       addToast("Failed to create sheet", "error");
@@ -685,8 +691,10 @@ const Settings: React.FC<SettingsProps> = ({
             
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-5">
               
-              <div className="space-y-2">
+              <div className="space-y-4">
                  <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Create New</h4>
+                 
+                 {/* Folder Selector */}
                  <div className="relative">
                    <div className="flex items-center gap-2 bg-gray-50 dark:bg-black/20 p-2 rounded-xl border border-gray-100 dark:border-gray-800">
                       <Folder size={16} className="text-gray-400 ml-1" />
@@ -718,13 +726,29 @@ const Settings: React.FC<SettingsProps> = ({
                    )}
                  </div>
 
+                 {/* Custom Filename Input */}
+                 <div>
+                    <label className="text-[10px] font-bold text-gray-400 mb-1.5 block">Filename</label>
+                    <div className="flex items-center bg-gray-50 dark:bg-black/20 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+                        <div className="bg-gray-100 dark:bg-white/5 px-3 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700 select-none whitespace-nowrap">
+                          EZFin Tracker -
+                        </div>
+                        <input 
+                          value={newSheetNameSuffix}
+                          onChange={(e) => setNewSheetNameSuffix(e.target.value)}
+                          placeholder="Nama (e.g. Pribadi)"
+                          className="flex-1 bg-transparent px-3 py-3 text-xs font-bold text-gray-900 dark:text-white focus:outline-none placeholder-gray-400 min-w-0"
+                        />
+                    </div>
+                 </div>
+
                  <button 
                   onClick={handleCreateSheet}
-                  disabled={isGoogleLoading}
-                  className="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20 ios-touch-target transition-transform flex items-center justify-center gap-2 text-sm"
+                  disabled={isGoogleLoading || !newSheetNameSuffix.trim()}
+                  className="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20 ios-touch-target transition-transform flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:grayscale"
                 >
                   {isGoogleLoading ? <Loader2 className="animate-spin" /> : <Plus size={18} />}
-                  Create {selectedFolder ? `in "${selectedFolder.name}"` : '"EZFin Tracker"'}
+                  Create File {selectedFolder ? `in "${selectedFolder.name}"` : ''}
                 </button>
               </div>
 

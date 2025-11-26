@@ -61,6 +61,9 @@ export const googleSheetService = {
       API_KEY = apiKey;
       localStorage.setItem('GOOGLE_API_KEY', apiKey);
     }
+    // Security: Clear existing session when creds change
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    accessToken = null;
     isInitialized = false;
     tokenClient = undefined;
   },

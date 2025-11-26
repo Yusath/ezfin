@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { Transaction, UserProfile, ToastMessage, Category } from './types';
@@ -88,11 +86,11 @@ function App() {
   useEffect(() => {
     const initData = async () => {
       try {
+        // 1. Initialize DB and Defaults
         const { user: loadedUser, categories: loadedCats } = await dbService.initDefaultsIfNeeded(DEFAULT_USER_PROFILE);
         const loadedTxs = await dbService.getAllTransactions();
 
         // SECURITY MIGRATION: Check if PIN is plain text (length < 64 for sha256 hex)
-        // If so, hash it immediately and save back to DB
         if (loadedUser.pin.length < 64) {
            console.log("Migrating Plain Text PIN to Hash...");
            const hashed = await hashPin(loadedUser.pin);
@@ -104,17 +102,18 @@ function App() {
         setCategories(loadedCats);
         setTransactions(loadedTxs);
         
-        // Init Google Service with Auto Restore from SESSION storage
+        // 2. Initialize Google Service with Persistent Session Restoration
         googleSheetService.initClient(async (success) => {
           if (success) {
              console.log("Google Services Initialized");
              
              // PERSISTENT LOGIN CHECK
-             // If service restored a session, fetch user info to update UI
+             // Check if initClient successfully restored a token from localStorage
              if (googleSheetService.hasValidSession) {
                 const token = googleSheetService.getToken();
                 if (token) {
                    try {
+                     console.log("Restoring User Session info...");
                      const userInfo = await googleSheetService.getUserInfo(token);
                      setUser(prev => ({
                        ...prev,
@@ -124,6 +123,7 @@ function App() {
                      console.log("Session restored: User logged in.");
                    } catch (e) {
                      console.warn("Restored session invalid", e);
+                     // If token is stale/invalid, sign out to clear storage
                      googleSheetService.signOut();
                    }
                 }

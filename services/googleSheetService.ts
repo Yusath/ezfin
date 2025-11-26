@@ -1,5 +1,4 @@
 
-
 import { Transaction, TransactionItem, Category } from "../types";
 
 declare global {
@@ -11,10 +10,10 @@ declare global {
 
 // User provided Client ID
 const DEFAULT_CLIENT_ID = "28569786950-2lnehaar8vn0cueo4gpav84umuc30kc1.apps.googleusercontent.com";
-// CHANGED: Key for local storage
+// PERSISTENCE: Key for local storage
 const TOKEN_STORAGE_KEY = 'ezfin_google_access_token';
 
-// Initial load from Env or LocalStorage (Config persists, Token does not)
+// Initial load from Env or LocalStorage
 let CLIENT_ID = process.env.GOOGLE_CLIENT_ID || localStorage.getItem('GOOGLE_CLIENT_ID') || DEFAULT_CLIENT_ID;
 let API_KEY = process.env.GOOGLE_API_KEY || localStorage.getItem('GOOGLE_API_KEY') || "";
 
@@ -51,7 +50,6 @@ export const googleSheetService = {
     return !!accessToken;
   },
 
-  // Helper to get token for App.tsx restoration logic
   getToken: () => {
     return accessToken;
   },
@@ -63,7 +61,6 @@ export const googleSheetService = {
       API_KEY = apiKey;
       localStorage.setItem('GOOGLE_API_KEY', apiKey);
     }
-    // Reset internal state to allow re-initialization
     isInitialized = false;
     tokenClient = undefined;
   },
@@ -126,25 +123,23 @@ export const googleSheetService = {
           if (resp.error !== undefined) {
             throw (resp);
           }
+          // LOGIN SUCCESS: Save token to variable and LocalStorage
           accessToken = resp.access_token;
-          // CHANGED: Save to localStorage for persistence across tabs/refresh
           localStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
           
-          // CRITICAL FIX: Manually set the token for GAPI
           if (window.gapi && window.gapi.client) {
             window.gapi.client.setToken(resp);
           }
         },
       });
 
-      // --- AUTO RESTORE SESSION LOGIC ---
-      // CHANGED: Restore from localStorage
+      // --- INITIAL CHECK: AUTO RESTORE SESSION ---
       const savedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
       if (savedToken) {
           console.log("Restoring Google Session from LocalStorage...");
           accessToken = savedToken;
+          // IMPORTANT: Restore token to GAPI client immediately so subsequent calls work
           if (window.gapi && window.gapi.client) {
-             // We construct a fake token object that GAPI expects
              window.gapi.client.setToken({ access_token: savedToken });
           }
       }
@@ -153,7 +148,7 @@ export const googleSheetService = {
       onInitComplete(true);
 
     } catch (error) {
-      console.error("Failed to initialize Google Services");
+      console.error("Failed to initialize Google Services", error);
       onInitComplete(false);
     }
   },
@@ -165,16 +160,15 @@ export const googleSheetService = {
       const promptSignIn = () => {
          if (!tokenClient) return reject("Google Token Client not ready");
          
-         // Override callback to capture response for this specific request
+         // Override callback to capture response
          tokenClient.callback = (resp: any) => {
             if (resp.error) {
                 reject(resp);
             } else {
+                // MODIFY LOGIN: Save to LocalStorage
                 accessToken = resp.access_token;
-                // CHANGED: Save to localStorage
                 localStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
 
-                // CRITICAL FIX: Bind the token to GAPI client immediately
                 if (window.gapi && window.gapi.client) {
                    window.gapi.client.setToken(resp);
                 }
@@ -182,7 +176,6 @@ export const googleSheetService = {
             }
          };
          
-         // Trigger the popup
          tokenClient.requestAccessToken({prompt: 'consent'});
       };
 
@@ -200,15 +193,14 @@ export const googleSheetService = {
   signOut: () => {
     const token = window.gapi?.client?.getToken();
     if (token !== null) {
-      // Best effort revoke
       try {
         window.google?.accounts?.oauth2?.revoke(token.access_token, () => {});
       } catch (e) {
         console.warn("Revoke failed (token might be invalid already)");
       }
     }
-    window.gapi?.client?.setToken(null); // Clear GAPI token
-    // CHANGED: Clear from localStorage
+    window.gapi?.client?.setToken(null);
+    // MODIFY LOGOUT: Remove from LocalStorage
     localStorage.removeItem(TOKEN_STORAGE_KEY); 
     accessToken = null;
   },
@@ -233,7 +225,6 @@ export const googleSheetService = {
 
   searchFolders: async (query: string): Promise<Array<{id: string, name: string}>> => {
      try {
-       // Search for folders only
        const q = `mimeType = 'application/vnd.google-apps.folder' and name contains '${query}' and trashed = false`;
        const response = await window.gapi.client.drive.files.list({
          q: q,
@@ -255,7 +246,6 @@ export const googleSheetService = {
         throw new Error("No access token available. Please sign in.");
       }
 
-      // 1. Create Sheet (Initially in Root)
       const response = await window.gapi.client.sheets.spreadsheets.create({
         resource: {
           properties: {
@@ -266,9 +256,7 @@ export const googleSheetService = {
 
       const spreadsheetId = response.result.spreadsheetId;
       
-      // 2. Move to specific folder if requested
       if (folderId) {
-        // Retrieve existing parents to remove them
         const file = await window.gapi.client.drive.files.get({
           fileId: spreadsheetId,
           fields: 'parents'
@@ -276,7 +264,6 @@ export const googleSheetService = {
         
         const previousParents = file.result.parents.join(',');
         
-        // Move file
         await window.gapi.client.drive.files.update({
           fileId: spreadsheetId,
           addParents: folderId,
@@ -285,7 +272,6 @@ export const googleSheetService = {
         });
       }
       
-      // 3. Initialize Header
       const values = [
         ["ID", "Date (ISO)", "Store", "Category", "Type", "Total Amount", "Items Detail"]
       ];
@@ -299,7 +285,6 @@ export const googleSheetService = {
         },
       });
       
-      // 4. Styling
       await window.gapi.client.sheets.spreadsheets.batchUpdate({
         spreadsheetId: spreadsheetId,
         resource: {
@@ -334,10 +319,8 @@ export const googleSheetService = {
         throw new Error("UNAUTHENTICATED");
     }
 
-    // Format items string: "2x Burger (@20000), 1x Coke (@5000)"
     const itemDetails = tx.items.map(i => `${i.qty}x ${i.name} (@${i.price})`).join(", ");
     
-    // We store ISO date for machine readability in the future restoration
     const row = [
       tx.id,
       tx.date, 
@@ -368,7 +351,6 @@ export const googleSheetService = {
     if (!accessToken && window.gapi?.client?.getToken() === null) return;
     
     try {
-      // 1. Find Row Index
       const response = await window.gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: spreadsheetId,
         range: 'Sheet1!A2:A',
@@ -378,9 +360,8 @@ export const googleSheetService = {
       if (!rows) return;
       
       const rowIndex = rows.findIndex((r: any[]) => r[0] === tx.id);
-      if (rowIndex === -1) return; // Not found
+      if (rowIndex === -1) return;
       
-      // Sheet Row Index = rowIndex + 2 (1 for header, 1 for 0-based index vs 1-based API)
       const sheetRow = rowIndex + 2;
       
       const itemDetails = tx.items.map(i => `${i.qty}x ${i.name} (@${i.price})`).join(", ");
@@ -444,7 +425,6 @@ export const googleSheetService = {
     if (!accessToken && window.gapi?.client?.getToken() === null) return;
     
     try {
-        // Clear everything from A2 (keeping header)
         await window.gapi.client.sheets.spreadsheets.values.clear({
             spreadsheetId,
             range: 'Sheet1!A2:Z10000', 
@@ -472,7 +452,6 @@ export const googleSheetService = {
   },
 
   fetchTransactions: async (spreadsheetId: string): Promise<Transaction[]> => {
-    // Check token existence
     if (!accessToken && window.gapi?.client?.getToken() === null) {
         throw new Error("Not logged in");
     }
@@ -480,26 +459,19 @@ export const googleSheetService = {
     try {
       const response = await window.gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: spreadsheetId,
-        range: 'Sheet1!A2:G', // Assuming A2 start (skip header)
+        range: 'Sheet1!A2:G',
       });
       
       const rows = response.result.values;
       if (!rows || rows.length === 0) return [];
 
       return rows.map((row: any[]) => {
-        // Parse Items from string: "2x Burger (@20000), ..."
         const itemsString = row[6] || "";
         const items: TransactionItem[] = [];
         
-        // Simple regex to try and reconstruct items
-        // UPDATED: regex to handle commas and dots in prices: (@20.000) or (@20,000)
         const regex = /(\d+)x\s(.+?)\s\(@([\d.,]+)\)/g;
         let match;
         while ((match = regex.exec(itemsString)) !== null) {
-            // Strip dots/commas for integer parsing, assuming the input was a valid integer representation initially
-            // But beware: 20.000 (Indonesian) = 20000. 20,00 (US) = 20. 
-            // Since app saves as integer string usually, we can strip.
-            // If user manually edited, we do our best.
             const cleanPrice = match[3].replace(/[.,]/g, '');
             items.push({
                 id: Math.random().toString(36).substr(2, 9),
@@ -509,7 +481,6 @@ export const googleSheetService = {
             });
         }
 
-        // Fallback if parsing failed but text exists
         if (items.length === 0 && itemsString) {
             items.push({
                 id: Math.random().toString(36).substr(2, 9),
@@ -521,7 +492,7 @@ export const googleSheetService = {
 
         return {
             id: row[0],
-            date: row[1], // ISO string from sheet
+            date: row[1],
             storeName: row[2],
             category: row[3],
             type: row[4] as 'expense' | 'income',
@@ -542,10 +513,9 @@ export const googleSheetService = {
     if (txIds.length === 0) return;
 
     try {
-      // 1. Fetch all data to find the Row Indices (expensive but safe)
       const response = await window.gapi.client.sheets.spreadsheets.values.get({
         spreadsheetId: spreadsheetId,
-        range: 'Sheet1!A2:A', // Fetch only ID column
+        range: 'Sheet1!A2:A',
       });
 
       const rows = response.result.values;
@@ -554,30 +524,21 @@ export const googleSheetService = {
       const idsToDelete = new Set(txIds);
       const rowIndicesToDelete: number[] = [];
 
-      // Map Sheet rows to IDs
       rows.forEach((row: any[], index: number) => {
          const id = row[0];
          if (idsToDelete.has(id)) {
-           // Sheet row index logic:
-           // Data starts at A2. 
-           // API result array index 0 corresponds to A2 (Row 2).
-           // Google Sheets API GridRange is 0-based index. 
-           // Row 1 (Header) is index 0. Row 2 is index 1.
-           // So, Array index 0 + 1 (header offset) = Sheet Row Index 1.
            rowIndicesToDelete.push(index + 1);
          }
       });
 
       if (rowIndicesToDelete.length === 0) return;
 
-      // 2. Sort indices descending to avoid shifting issues when deleting
       rowIndicesToDelete.sort((a, b) => b - a);
 
-      // 3. Construct Batch Update Request
       const requests = rowIndicesToDelete.map(rowIndex => ({
         deleteDimension: {
           range: {
-            sheetId: 0, // Assuming Sheet1 is the first sheet
+            sheetId: 0,
             dimension: "ROWS",
             startIndex: rowIndex,
             endIndex: rowIndex + 1
@@ -597,8 +558,6 @@ export const googleSheetService = {
     }
   },
 
-  // --- SETTINGS SYNC (PIN & Categories & Theme) ---
-
   ensureSettingsSheet: async (spreadsheetId: string) => {
     try {
       const meta = await window.gapi.client.sheets.spreadsheets.get({
@@ -613,7 +572,6 @@ export const googleSheetService = {
                   requests: [{ addSheet: { properties: { title: 'Settings', hidden: true } } }]
               }
           });
-          // Initialize headers
            await window.gapi.client.sheets.spreadsheets.values.update({
               spreadsheetId,
               range: 'Settings!A1:D1',

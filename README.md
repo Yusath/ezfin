@@ -105,14 +105,6 @@ Your data belongs to you. EZFin syncs directly to your personal **Google Drive**
 
 ---
 
-## 📱 Screenshots
-
-| Dashboard | Receipt Scanner | Statistics | Settings |
-|:---:|:---:|:---:|:---:|
-| *(Add Screenshot)* | *(Add Screenshot)* | *(Add Screenshot)* | *(Add Screenshot)* |
-
----
-
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.

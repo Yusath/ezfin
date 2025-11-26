@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Category, Transaction, TransactionItem } from '../types';
 import { Camera, Plus, Trash2, Sparkles, ChevronLeft, Upload, ScanLine, Image as ImageIcon, ChevronDown, Check, X, Grid } from 'lucide-react';
@@ -97,11 +98,14 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
     setItems(items.map(item => {
         if (item.id !== id) return item;
         
+        // Handle number inputs: Allow empty string for UX, otherwise parse
         let safeValue = value;
         if (field === 'qty' || field === 'price') {
-            if (value === '') safeValue = '';
-            else {
+            if (value === '') {
+                safeValue = ''; // Allow clear
+            } else {
                const parsed = parseFloat(value);
+               // Keep as number if valid, otherwise fallback to existing or 0
                safeValue = isNaN(parsed) ? 0 : parsed;
             }
         }
@@ -156,7 +160,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
     });
     
     setIsSaving(false);
-    navigate(-1);
+    navigate('/');
   };
 
   // --- AI SCANNING LOGIC ---
@@ -392,7 +396,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
                                 type="number"
                                 className="w-full bg-white dark:bg-black/20 rounded-xl p-2 font-bold text-center text-sm dark:text-white border border-transparent focus:border-blue-500 focus:outline-none shadow-sm"
                                 placeholder="1"
-                                value={item.qty === 0 ? '' : item.qty}
+                                value={item.qty}
                                 onChange={e => updateItem(item.id, 'qty', e.target.value)}
                              />
                           </div>
@@ -404,7 +408,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
                                    type="number"
                                    className="w-full bg-white dark:bg-black/20 rounded-xl py-2 pl-9 pr-3 text-sm font-bold dark:text-white focus:outline-none border border-transparent focus:border-blue-500 shadow-sm"
                                    placeholder="0"
-                                   value={item.price === 0 ? '' : item.price}
+                                   value={item.price}
                                    onChange={e => updateItem(item.id, 'price', e.target.value)}
                                 />
                              </div>

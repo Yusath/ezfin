@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { Transaction } from "../types";
 
@@ -120,7 +121,11 @@ export const scanReceipt = async (file: File): Promise<any> => {
 
     const text = response.text;
     if (!text) return null;
-    return JSON.parse(text);
+    
+    // Remove Markdown code blocks if present
+    const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    
+    return JSON.parse(cleanText);
   } catch (error) {
     console.error("Gemini Scan Error:", error);
     throw error;

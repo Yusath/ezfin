@@ -1,3 +1,4 @@
+
 import { Transaction, TransactionItem, Category } from "../types";
 
 declare global {
@@ -480,15 +481,20 @@ export const googleSheetService = {
         const items: TransactionItem[] = [];
         
         // Simple regex to try and reconstruct items
-        // Format: qty "x" name "(@" price ")"
-        const regex = /(\d+)x\s(.+?)\s\(@(\d+)\)/g;
+        // UPDATED: regex to handle commas and dots in prices: (@20.000) or (@20,000)
+        const regex = /(\d+)x\s(.+?)\s\(@([\d.,]+)\)/g;
         let match;
         while ((match = regex.exec(itemsString)) !== null) {
+            // Strip dots/commas for integer parsing, assuming the input was a valid integer representation initially
+            // But beware: 20.000 (Indonesian) = 20000. 20,00 (US) = 20. 
+            // Since app saves as integer string usually, we can strip.
+            // If user manually edited, we do our best.
+            const cleanPrice = match[3].replace(/[.,]/g, '');
             items.push({
                 id: Math.random().toString(36).substr(2, 9),
                 qty: parseInt(match[1]),
                 name: match[2],
-                price: parseInt(match[3])
+                price: parseInt(cleanPrice) || 0
             });
         }
 

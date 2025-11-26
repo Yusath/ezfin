@@ -257,7 +257,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
                     </div>
                     <span className="text-[10px] text-blue-100 font-bold uppercase tracking-wider truncate">{t('dash.income')}</span>
                   </div>
-                  <span className="font-bold text-base md:text-lg truncate w-full">Rp {monthlyIncome.toLocaleString('id-ID')}</span>
+                  {/* Fixed: Use Total Income All Time to match Balance Context */}
+                  <span className="font-bold text-base md:text-lg truncate w-full">Rp {totalIncomeAllTime.toLocaleString('id-ID')}</span>
                 </div>
                 <div className="bg-white/20 backdrop-blur-md rounded-2xl p-3 md:p-4 flex flex-col items-center md:items-start border border-white/10 hover:bg-white/30 transition-colors min-w-0">
                   <div className="flex items-center gap-1.5 md:gap-2 mb-1 justify-center md:justify-start w-full">
@@ -266,7 +267,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
                     </div>
                     <span className="text-[10px] text-blue-100 font-bold uppercase tracking-wider truncate">{t('dash.expense')}</span>
                   </div>
-                  <span className="font-bold text-base md:text-lg truncate w-full">Rp {monthlyExpense.toLocaleString('id-ID')}</span>
+                   {/* Fixed: Use Total Expense All Time to match Balance Context */}
+                  <span className="font-bold text-base md:text-lg truncate w-full">Rp {totalExpenseAllTime.toLocaleString('id-ID')}</span>
                 </div>
               </div>
             </div>

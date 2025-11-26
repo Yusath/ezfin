@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Category, Transaction, TransactionItem } from '../types';
 import { Camera, Plus, Trash2, Sparkles, ChevronLeft, Upload, ScanLine, Image as ImageIcon, ChevronDown, Check, X, Grid } from 'lucide-react';
@@ -53,20 +54,15 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
       if (cat) {
         setCategoryId(cat.id);
       } else {
-        // Fallback for custom categories or mismatch, try finding by name only
         const anyCat = categories.find(c => c.name === initialData.category);
         if (anyCat) setCategoryId(anyCat.id);
       }
     }
   }, [initialData, categories]);
 
-  // Sync Category with Type (Only if not initial load or manual type switch)
+  // Sync Category with Type
   useEffect(() => {
-    // Prevent overriding if we just loaded initialData which might have set a category
-    // But since txType changes, we need to check if current category is valid for new type
     const currentCat = categories.find(c => c.id === categoryId);
-    
-    // If current category doesn't match the selected type, switch to default
     if (!currentCat || currentCat.type !== txType) {
         const firstValid = categories.find(c => c.type === txType);
         if (firstValid) {
@@ -97,14 +93,12 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
     setItems(items.map(item => {
         if (item.id !== id) return item;
         
-        // Handle number inputs: Allow empty string for UX, otherwise parse
         let safeValue = value;
         if (field === 'qty' || field === 'price') {
             if (value === '') {
-                safeValue = ''; // Allow clear
+                safeValue = '';
             } else {
                const parsed = parseFloat(value);
-               // Keep as number if valid, otherwise fallback to existing or 0
                safeValue = isNaN(parsed) ? 0 : parsed;
             }
         }
@@ -130,13 +124,11 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
     const categoryName = currentCat ? currentCat.name : (categories.find(c => c.type === txType)?.name || 'General');
     const finalDate = new Date(date).toISOString();
 
-    // Prepare Items
     let finalItems: TransactionItem[] = [];
     if (txType === 'income') {
-        // Construct a dummy item for income to satisfy type requirements
         finalItems = [{
             id: Math.random().toString(36).substring(7),
-            name: storeName, // Use source name as item name
+            name: storeName,
             qty: 1,
             price: Number(incomeAmount) || 0
         }];
@@ -162,7 +154,6 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
     navigate('/');
   };
 
-  // --- AI SCANNING LOGIC ---
   const handleUploadClick = () => fileInputRef.current?.click();
   const handleCameraClick = () => cameraInputRef.current?.click();
   
@@ -170,7 +161,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       await processReceipt(file);
-      e.target.value = ''; // Reset input
+      e.target.value = '';
     }
   };
 
@@ -230,8 +221,6 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
   const availableCategories = categories.filter(c => c.type === txType);
   const selectedCategory = categories.find(c => c.id === categoryId);
 
-  // --- RENDERING ---
-
   if (isScanning) {
     return (
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 w-full backdrop-blur-sm animate-ios-fade-in">
@@ -275,7 +264,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
                 className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 ios-touch-target ${
                     txType === 'expense' 
                     ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 shadow-sm' 
-                    : 'text-gray-400 hover:text-gray-600'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
                 }`}
             >
                 {t('add.expense')}
@@ -285,7 +274,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
                 className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 ios-touch-target ${
                     txType === 'income' 
                     ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 shadow-sm' 
-                    : 'text-gray-400 hover:text-gray-600'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
                 }`}
             >
                 {t('add.income')}
@@ -296,11 +285,10 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
         {txType === 'expense' && !initialData && (
           <div className="animate-slide-in-right">
             <div className="flex justify-between items-center mb-2 px-1">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Metode Input</span>
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Metode Input</span>
                 <span className="text-[10px] font-medium text-blue-500 flex items-center gap-1"><Sparkles size={10}/> AI Support</span>
             </div>
             <div className="flex gap-4 h-20">
-                {/* Button 1: Upload Document */}
                 <button 
                   onClick={handleUploadClick}
                   className="flex-1 bg-white dark:bg-[#1C1C1E] border border-gray-200 dark:border-white/10 rounded-[1.25rem] shadow-sm active:scale-95 transition-all flex flex-col items-center justify-center gap-1.5 group relative overflow-hidden"
@@ -313,14 +301,11 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
                     </div>
                 </button>
 
-                {/* Button 2: Camera Direct */}
                 <button 
                   onClick={handleCameraClick}
                   className="flex-1 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-[1.25rem] shadow-lg shadow-blue-500/25 active:scale-95 transition-all flex flex-col items-center justify-center gap-1.5 group relative overflow-hidden"
                 >
-                    {/* Decorative bg elements */}
                     <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-xl"></div>
-                    
                     <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm group-hover:rotate-12 transition-transform">
                         <ScanLine size={16} className="text-white" />
                     </div>
@@ -330,7 +315,6 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
                 </button>
             </div>
 
-            {/* Hidden Inputs */}
             <input 
               type="file" 
               ref={fileInputRef} 
@@ -352,7 +336,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
         {/* Transaction Details Form */}
         <div className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] p-6 shadow-sm border border-gray-100 dark:border-gray-800 animate-slide-in-right" style={{animationDelay: '0.1s'}}>
            <div className="mb-6">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block mb-1.5">
+              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide block mb-1.5">
                   {txType === 'income' ? 'Sumber Pemasukan' : t('add.store')}
               </label>
               <input 
@@ -367,7 +351,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
            {txType === 'expense' ? (
                <div className="space-y-4">
                   <div className="flex justify-between items-end pb-2 border-b border-gray-100 dark:border-white/5">
-                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">{t('add.items')}</label>
+                     <label className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">{t('add.items')}</label>
                      <button onClick={addItem} className="text-blue-500 text-xs font-bold flex items-center gap-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1 rounded-lg transition-colors ios-touch-target">
                        <Plus size={14} /> {t('add.addItem')}
                      </button>
@@ -379,7 +363,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
                           <Trash2 size={16} />
                        </button>
                        
-                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block mb-1">Item {idx + 1}</label>
+                       <label className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wide block mb-1">Item {idx + 1}</label>
                        
                        <input 
                            className="w-full bg-transparent text-base font-bold border-b border-gray-200 dark:border-white/10 py-1.5 mb-3 focus:outline-none focus:border-blue-500 dark:text-white placeholder-gray-300"
@@ -390,7 +374,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
                        
                        <div className="flex gap-4">
                           <div className="w-1/3">
-                             <label className="text-[10px] text-gray-400 block mb-1">Qty</label>
+                             <label className="text-[10px] text-gray-600 dark:text-gray-400 block mb-1">Qty</label>
                              <input 
                                 type="number"
                                 className="w-full bg-white dark:bg-black/20 rounded-xl p-2 font-bold text-center text-sm dark:text-white border border-transparent focus:border-blue-500 focus:outline-none shadow-sm"
@@ -400,7 +384,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
                              />
                           </div>
                           <div className="flex-1">
-                             <label className="text-[10px] text-gray-400 block mb-1">Harga Satuan</label>
+                             <label className="text-[10px] text-gray-600 dark:text-gray-400 block mb-1">Harga Satuan</label>
                              <div className="relative">
                                 <span className="absolute left-3 top-2 text-xs text-gray-400 font-bold">Rp</span>
                                 <input 
@@ -417,10 +401,9 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
                   ))}
                </div>
            ) : (
-               /* INCOME MODE: SIMPLE INPUT */
                <div className="space-y-4">
                   <div>
-                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block mb-1.5">Jumlah Pemasukan</label>
+                     <label className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide block mb-1.5">Jumlah Pemasukan</label>
                      <div className="relative">
                         <span className="absolute left-4 top-3.5 text-lg text-gray-400 font-bold">Rp</span>
                         <input 
@@ -448,7 +431,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
         <div className="bg-white dark:bg-[#1C1C1E] rounded-[2rem] p-1 shadow-sm border border-gray-100 dark:border-gray-800 animate-slide-in-right" style={{animationDelay: '0.2s'}}>
            <div className="flex flex-col md:flex-row">
               <div className="flex-1 p-5 border-b md:border-b-0 md:border-r border-gray-100 dark:border-gray-800">
-                 <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1.5">{t('add.date')}</label>
+                 <label className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase block mb-1.5">{t('add.date')}</label>
                  <input 
                    type="datetime-local" 
                    value={date}
@@ -457,12 +440,11 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
                  />
               </div>
               
-              {/* iOS Style Custom Dropdown Trigger */}
               <div 
                 className="flex-1 p-5 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors rounded-b-[2rem] md:rounded-bl-none md:rounded-r-[2rem] ios-touch-target"
                 onClick={() => setShowCategoryPicker(true)}
               >
-                 <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1.5">{t('add.category')}</label>
+                 <label className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase block mb-1.5">{t('add.category')}</label>
                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                        {selectedCategory ? (
@@ -471,7 +453,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
                             <span className="font-bold text-sm dark:text-white">{selectedCategory.name}</span>
                          </>
                        ) : (
-                         <span className="font-bold text-sm text-gray-300">Pilih Kategori</span>
+                         <span className="font-bold text-sm text-gray-400">Pilih Kategori</span>
                        )}
                     </div>
                     <ChevronDown size={16} className="text-gray-400" />
@@ -487,7 +469,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
           className={`w-full text-white py-3.5 rounded-[1.5rem] font-bold text-base shadow-xl ios-touch-target disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-2 mb-10 ${
               txType === 'income' 
               ? 'bg-green-600 shadow-green-500/20 hover:bg-green-700' 
-              : 'bg-primary shadow-blue-500/20 hover:bg-blue-600'
+              : 'bg-blue-600 shadow-blue-500/20 hover:bg-blue-700'
           }`}
         >
           {isSaving ? (
@@ -502,30 +484,26 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
       {/* iOS Bottom Sheet: Category Picker */}
       {showCategoryPicker && (
         <div className="fixed inset-0 z-[70] flex items-end justify-center">
-           {/* Backdrop */}
            <div 
              className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in"
              onClick={() => setShowCategoryPicker(false)}
            ></div>
 
-           {/* Sheet */}
            <div className="relative w-full max-w-lg bg-white dark:bg-[#1C1C1E] rounded-t-[2rem] shadow-2xl animate-ios-slide-up flex flex-col max-h-[75vh]">
-              {/* Handle */}
               <div className="flex justify-center pt-3 pb-1" onClick={() => setShowCategoryPicker(false)}>
                  <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></div>
               </div>
               
               <div className="px-6 py-4 flex justify-between items-center border-b border-gray-100 dark:border-white/5">
-                 <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                 <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <Grid size={18} />
                     Pilih Kategori
-                 </h3>
+                 </h2>
                  <button onClick={() => setShowCategoryPicker(false)} aria-label="Tutup" className="bg-gray-100 dark:bg-white/10 p-2 rounded-full ios-touch-target">
                     <X size={16} className="text-gray-500 dark:text-gray-300" />
                  </button>
               </div>
 
-              {/* List */}
               <div className="overflow-y-auto p-4 space-y-2 pb-safe">
                  {availableCategories.length > 0 ? (
                     availableCategories.map((cat) => {

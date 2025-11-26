@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Transaction, UserProfile } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
@@ -18,7 +19,6 @@ const Stats: React.FC<StatsProps> = ({ transactions, user }) => {
   const [advice, setAdvice] = useState('');
   const [loadingAdvice, setLoadingAdvice] = useState(false);
 
-  // Aggregate data by category for Expenses only
   const categoryData = transactions
     .filter(t => t.type === 'expense')
     .reduce((acc: Record<string, number>, curr) => {
@@ -47,9 +47,8 @@ const Stats: React.FC<StatsProps> = ({ transactions, user }) => {
         <h1 className="text-2xl font-extrabold text-black dark:text-white tracking-tight">{t('stats.title')}</h1>
       </div>
 
-      {/* Pie Chart Card */}
       <div className="bg-white dark:bg-[#1C1C1E] p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/5">
-        <h3 className="text-base font-bold text-gray-900 dark:text-white mb-6 text-center">{t('stats.dist')}</h3>
+        <h2 className="text-base font-bold text-gray-900 dark:text-white mb-6 text-center">{t('stats.dist')}</h2>
         <div className="h-64 w-full">
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
@@ -77,7 +76,7 @@ const Stats: React.FC<StatsProps> = ({ transactions, user }) => {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-2">
+            <div className="h-full flex flex-col items-center justify-center text-gray-500 space-y-2">
               <div className="w-14 h-14 bg-gray-50 dark:bg-white/5 rounded-full flex items-center justify-center">
                  <div className="w-7 h-7 bg-gray-200 dark:bg-white/10 rounded-full"></div>
               </div>
@@ -87,9 +86,8 @@ const Stats: React.FC<StatsProps> = ({ transactions, user }) => {
         </div>
       </div>
 
-      {/* Top Categories List */}
       <div className="bg-white dark:bg-[#1C1C1E] p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/5">
-         <h3 className="font-bold mb-5 dark:text-white text-base">{t('stats.details')}</h3>
+         <h2 className="font-bold mb-5 dark:text-white text-base">{t('stats.details')}</h2>
          <div className="space-y-3">
             {chartData.sort((a, b) => b.value - a.value).map((item, idx) => (
               <div key={item.name} className="flex justify-between items-center animate-slide-in-right p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors" style={{ animationDelay: `${idx * 0.1}s` }}>
@@ -103,7 +101,6 @@ const Stats: React.FC<StatsProps> = ({ transactions, user }) => {
          </div>
       </div>
 
-      {/* AI Advisor Button */}
       <button
         onClick={handleAskAI}
         className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-5 rounded-[2rem] shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-4 ios-touch-target hover:scale-[1.01] transition-transform"
@@ -113,11 +110,10 @@ const Stats: React.FC<StatsProps> = ({ transactions, user }) => {
         </div>
         <div className="text-left">
           <p className="font-bold text-base">{t('stats.advisor.btn')}</p>
-          <p className="text-[10px] opacity-80 text-indigo-100 font-medium">{t('stats.advisor.desc')}</p>
+          <p className="text-[10px] opacity-80 text-white font-medium">{t('stats.advisor.desc')}</p>
         </div>
       </button>
 
-      {/* AI Modal */}
       {isAdvisorOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-md w-full animate-ios-fade-in">
           <div className="bg-white dark:bg-[#1C1C1E] w-full max-w-md rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl overflow-hidden page-slide-up max-h-[80vh] flex flex-col m-0 sm:m-4">
@@ -126,7 +122,7 @@ const Stats: React.FC<StatsProps> = ({ transactions, user }) => {
                 <div className="bg-white/20 p-1.5 rounded-full">
                   <Bot size={20} />
                 </div>
-                <h3 className="font-bold text-base">FinBot Advisor</h3>
+                <h2 className="font-bold text-base">FinBot Advisor</h2>
               </div>
               <button onClick={() => setIsAdvisorOpen(false)} aria-label="Close advisor" className="hover:bg-white/20 p-2 rounded-full ios-touch-target transition-colors">
                 <X size={18} />

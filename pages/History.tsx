@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Transaction } from '../types';
 import { Search, ArrowUpRight, ArrowDownLeft, Trash2, Check, CheckCircle2, Circle, AlertCircle, Edit2 } from 'lucide-react';
@@ -15,7 +16,6 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions, onDelete }) => {
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Selection State
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -26,7 +26,6 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions, onDelete }) => {
     .filter(t => t.storeName.toLowerCase().includes(searchTerm.toLowerCase()) || t.category.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  // Helper functions
   const isToday = (d: Date) => {
     const now = new Date();
     return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
@@ -41,7 +40,6 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions, onDelete }) => {
     groupedTransactions[key].push(tx);
   });
 
-  // --- Handlers ---
   const toggleSelectionMode = () => {
     if (isSelectionMode) {
       setIsSelectionMode(false);
@@ -75,7 +73,6 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions, onDelete }) => {
 
   return (
     <div className="pt-safe min-h-screen bg-[#F2F2F7] dark:bg-black page-transition">
-      {/* Title & Action Header */}
       <div className="px-6 py-6 pb-2 flex justify-between items-center">
         <h1 className="text-2xl font-extrabold text-black dark:text-white tracking-tight">{t('hist.title')}</h1>
         <button 
@@ -90,7 +87,6 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions, onDelete }) => {
         </button>
       </div>
 
-      {/* Search & Filter (Hide in Selection Mode for cleaner UI) */}
       {!isSelectionMode && (
         <div className="px-4 mb-4 animate-fade-in">
           <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl p-2.5 flex items-center shadow-sm mb-3 border border-gray-100 dark:border-white/5 transition-colors focus-within:ring-2 focus-within:ring-primary/20">
@@ -99,7 +95,7 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions, onDelete }) => {
                value={searchTerm}
                onChange={e => setSearchTerm(e.target.value)}
                placeholder={t('hist.search')}
-               className="w-full bg-transparent border-none focus:outline-none px-3 text-sm dark:text-white h-full font-medium"
+               className="w-full bg-transparent border-none focus:outline-none px-3 text-sm dark:text-white h-full font-medium placeholder-gray-400"
              />
           </div>
           
@@ -117,7 +113,6 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions, onDelete }) => {
         </div>
       )}
 
-      {/* Status Bar for Selection Mode */}
       {isSelectionMode && (
         <div className="px-6 mb-4 animate-slide-in-right">
            <p className="text-sm font-semibold text-gray-500">
@@ -126,11 +121,10 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions, onDelete }) => {
         </div>
       )}
 
-      {/* List */}
       <div className="px-4 pb-32 space-y-5">
         {Object.entries(groupedTransactions).map(([date, txs], groupIdx) => (
           <div key={date} className="animate-slide-in-right" style={{ animationDelay: `${groupIdx * 0.05}s` }}>
-            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wide ml-3 mb-2">{date}</h3>
+            <h2 className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wide ml-3 mb-2">{date}</h2>
             <div className="bg-white dark:bg-[#1C1C1E] rounded-[1.25rem] overflow-hidden shadow-sm border border-gray-100 dark:border-white/5">
               {txs.map((tx, idx) => {
                 const isSelected = selectedIds.has(tx.id);
@@ -148,7 +142,6 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions, onDelete }) => {
                       }`}
                     >
                       <div className="flex items-center gap-3 overflow-hidden flex-1">
-                        {/* Checkbox Animation Container */}
                         <div 
                           className={`transition-all duration-300 overflow-hidden ${
                             isSelectionMode ? 'w-6 opacity-100 mr-2' : 'w-0 opacity-0 mr-0'
@@ -166,7 +159,7 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions, onDelete }) => {
                         </div>
                         <div className="truncate flex-1 pr-2">
                           <p className={`font-bold text-sm text-gray-900 dark:text-white leading-tight mb-0.5 truncate ${isSelected ? 'text-primary dark:text-blue-400' : ''}`}>{tx.storeName}</p>
-                          <p className="text-[10px] text-gray-400 font-medium truncate">{tx.category} • {new Date(tx.date).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}</p>
+                          <p className="text-[10px] text-gray-600 dark:text-gray-400 font-medium truncate">{tx.category} • {new Date(tx.date).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})}</p>
                         </div>
                       </div>
                       
@@ -175,7 +168,6 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions, onDelete }) => {
                             {tx.type === 'income' ? '+' : '-'} {tx.totalAmount.toLocaleString('id-ID')}
                           </span>
                           
-                          {/* Single Item Delete Button - Only in Normal Mode */}
                           {!isSelectionMode && (
                               <button 
                                   onClick={(e) => {
@@ -208,7 +200,6 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions, onDelete }) => {
         )}
       </div>
 
-      {/* Floating Action Bar for Deletion */}
       <div className={`fixed bottom-20 left-0 right-0 p-6 transition-transform duration-500 z-40 ${isSelectionMode && selectedIds.size > 0 ? 'translate-y-0' : 'translate-y-[200%]'}`}>
          <button 
            onClick={() => setIsConfirmOpen(true)}
@@ -219,16 +210,15 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions, onDelete }) => {
          </button>
       </div>
 
-      {/* Confirmation Modal */}
       {isConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 w-full animate-fade-in">
            <div className="bg-white dark:bg-[#1C1C1E] w-full max-w-xs p-6 rounded-[2rem] shadow-2xl animate-shake text-center page-slide-up">
               <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
                  <AlertCircle size={24} />
               </div>
-              <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-white">
+              <h2 className="font-bold text-lg mb-2 text-gray-900 dark:text-white">
                   {itemToDelete ? "Hapus Transaksi?" : `Hapus ${selectedIds.size} Transaksi?`}
-              </h3>
+              </h2>
               <p className="text-xs text-gray-500 mb-6 leading-relaxed">
                 Tindakan ini tidak dapat dibatalkan. Data akan dihapus dari penyimpanan lokal dan Google Sheets (jika terhubung).
               </p>

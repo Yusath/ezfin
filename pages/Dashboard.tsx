@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Transaction, Category } from '../types';
 import { TrendingUp, TrendingDown, Wallet, X, Settings as SettingsIcon, LogIn, CheckCircle, RefreshCcw, PieChart, Activity, Plus } from 'lucide-react';
@@ -25,7 +26,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
   
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  // Sync local edit state when user prop updates (e.g. after Google Login or DB Load)
+  // Sync local edit state when user prop updates
   useEffect(() => {
     setEditName(user.name);
     setEditAvatar(user.avatarUrl);
@@ -166,10 +167,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
       const token = await googleSheetService.signIn();
       const userInfo = await googleSheetService.getUserInfo(token);
       
-      // Update User Profile with Google Info
       onUpdateUser({ 
-        name: userInfo.name,          // Sync Name
-        avatarUrl: userInfo.picture,  // Sync Photo
+        name: userInfo.name,
+        avatarUrl: userInfo.picture,
         googleEmail: userInfo.email,
         googlePhotoUrl: userInfo.picture,
       });
@@ -205,7 +205,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
             className="w-10 h-10 rounded-full object-cover shadow-sm border-2 border-white dark:border-card-dark"
           />
           <div className="flex flex-col items-start text-left">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{getGreeting()}</span>
+            <span className="text-xs font-semibold text-gray-700 dark:text-gray-400">{getGreeting()}</span>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
               {user.name.split(' ')[0]}
             </h2>
@@ -225,7 +225,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
       <div className="hidden md:flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">{t('nav.dashboard')}</h1>
-          <p className="text-sm text-gray-500">{t('dash.welcome')}, {user.name} 👋</p>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('dash.welcome')}, {user.name} 👋</p>
         </div>
         <button 
           onClick={() => setIsProfileModalOpen(true)}
@@ -236,16 +236,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
         </button>
       </div>
 
-      {/* DASHBOARD GRID */}
-      {/* Changed gap-4 to gap-y-4 to remove horizontal gap on mobile */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-y-4 md:gap-6 w-full">
 
-        {/* Hero Card (Balance) - Full Stretch on Mobile */}
-        {/* Adjusted Font Sizes for Proportion */}
+        {/* Hero Card (Balance) */}
         <div className="md:col-span-8 w-full flex flex-col gap-6">
           <div className="w-full relative overflow-hidden rounded-b-[2rem] md:rounded-[2rem] p-6 md:p-8 shadow-ios shadow-blue-500/20 bg-gradient-to-br from-[#007AFF] to-[#5856D6] text-white ios-touch-target">
             <div className="relative z-10 flex flex-col items-center md:items-start text-center md:text-left">
-              <span className="text-blue-100 text-[10px] font-semibold tracking-widest uppercase mb-1 opacity-80">{t('dash.balance')}</span>
+              <span className="text-blue-50 text-[10px] font-bold tracking-widest uppercase mb-1">{t('dash.balance')}</span>
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-6 break-words max-w-full">
                 Rp {balance.toLocaleString('id-ID')}
               </h1>
@@ -256,9 +253,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
                     <div className="p-1 md:p-1.5 bg-white/20 rounded-full shrink-0">
                       <TrendingUp size={10} className="md:w-3 md:h-3 text-white" />
                     </div>
-                    <span className="text-[10px] text-blue-100 font-bold uppercase tracking-wider truncate">{t('dash.income')}</span>
+                    <span className="text-[10px] text-white font-bold uppercase tracking-wider truncate">{t('dash.income')}</span>
                   </div>
-                  {/* Fixed: Use Total Income All Time to match Balance Context */}
                   <span className="font-bold text-base md:text-lg truncate w-full">Rp {totalIncomeAllTime.toLocaleString('id-ID')}</span>
                 </div>
                 <div className="bg-white/20 backdrop-blur-md rounded-2xl p-3 md:p-4 flex flex-col items-center md:items-start border border-white/10 hover:bg-white/30 transition-colors min-w-0">
@@ -266,9 +262,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
                     <div className="p-1 md:p-1.5 bg-white/20 rounded-full shrink-0">
                       <TrendingDown size={10} className="md:w-3 md:h-3 text-white" />
                     </div>
-                    <span className="text-[10px] text-blue-100 font-bold uppercase tracking-wider truncate">{t('dash.expense')}</span>
+                    <span className="text-[10px] text-white font-bold uppercase tracking-wider truncate">{t('dash.expense')}</span>
                   </div>
-                   {/* Fixed: Use Total Expense All Time to match Balance Context */}
                   <span className="font-bold text-base md:text-lg truncate w-full">Rp {totalExpenseAllTime.toLocaleString('id-ID')}</span>
                 </div>
               </div>
@@ -278,7 +273,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
             <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/20 rounded-full blur-3xl pointer-events-none"></div>
           </div>
           
-          {/* Desktop Only: Big "New Transaction" Button */}
           <Link 
             to="/add" 
             className="hidden md:flex w-full bg-black dark:bg-white dark:text-black text-white py-4 rounded-[1.5rem] font-bold shadow-lg shadow-gray-200 dark:shadow-none hover:shadow-xl transition-all items-center justify-center gap-3 active:scale-[0.99] text-lg"
@@ -293,15 +287,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
         {/* Quick Stats / Info */}
         <div className="col-span-12 md:col-span-4 flex flex-col h-full mx-4 md:mx-0">
            <div className="bg-card-light dark:bg-card-dark rounded-[2rem] p-5 shadow-sm border border-gray-100 dark:border-white/5 h-full flex flex-col justify-center">
-             <h3 className="font-bold text-base mb-3 text-gray-900 dark:text-white flex items-center gap-2">
+             <h2 className="font-bold text-base mb-3 text-gray-900 dark:text-white flex items-center gap-2">
                 <Activity size={16} className="text-primary"/>
                 {t('dash.quickSum')}
-             </h3>
-             {/* Grid layout for mobile flexibility */}
+             </h2>
              <div className="grid grid-cols-2 md:grid-cols-1 gap-3 md:gap-3 h-full">
                <div className="flex flex-col justify-center items-center md:items-start p-3 bg-surface dark:bg-white/5 rounded-2xl md:flex-row md:justify-between">
                  <div className="text-center md:text-left">
-                    <span className="text-[10px] font-medium text-gray-500 block mb-0.5">{t('dash.txMonth')}</span>
+                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-0.5">{t('dash.txMonth')}</span>
                     <span className="font-bold text-gray-900 dark:text-white text-xl md:text-lg">{monthlyTransactions.length}</span>
                  </div>
                  <div className="hidden md:flex w-8 h-8 rounded-full bg-blue-100 dark:bg-white/10 items-center justify-center text-primary">
@@ -311,7 +304,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
                
                <div className="flex flex-col justify-center items-center md:items-start p-3 bg-surface dark:bg-white/5 rounded-2xl md:flex-row md:justify-between">
                  <div className="text-center md:text-left w-full">
-                    <span className="text-[10px] font-medium text-gray-500 block mb-0.5">{t('dash.avgSpend')}</span>
+                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-0.5">{t('dash.avgSpend')}</span>
                     <span className="font-bold text-gray-900 dark:text-white text-base md:text-lg truncate block">
                        Rp {Math.round((monthlyExpense || 0) / (new Date().getDate() || 1)).toLocaleString('id-ID', { notation: 'compact' })}
                     </span>
@@ -327,7 +320,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
         {/* Chart Section */}
         <div className="col-span-12 md:col-span-8 space-y-4 mx-4 md:mx-0">
           <div className="flex justify-between items-center px-2">
-            <h3 className="font-bold text-lg text-gray-900 dark:text-white">{t('dash.analytics')}</h3>
+            <h2 className="font-bold text-lg text-gray-900 dark:text-white">{t('dash.analytics')}</h2>
             <div className="flex bg-gray-200 dark:bg-white/10 rounded-lg p-0.5">
               {(['week', 'month', 'year'] as const).map((p) => (
                 <button
@@ -336,7 +329,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
                   className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all uppercase ios-touch-target ${
                     chartPeriod === p 
                       ? 'bg-card-light dark:bg-card-dark shadow-sm text-primary' 
-                      : 'text-gray-500 dark:text-gray-400'
+                      : 'text-gray-700 dark:text-gray-400'
                   }`}
                 >
                   {p}
@@ -360,7 +353,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
                     dataKey="name" 
                     axisLine={false} 
                     tickLine={false} 
-                    tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 600 }}
+                    tick={{ fill: '#6B7280', fontSize: 10, fontWeight: 600 }}
                     dy={10}
                   />
                   <Tooltip 
@@ -373,7 +366,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-gray-400">
+              <div className="h-full flex flex-col items-center justify-center text-gray-500">
                 <p className="text-xs font-medium">No data available for this period</p>
               </div>
             )}
@@ -383,8 +376,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
         {/* Recent List */}
         <div className="col-span-12 md:col-span-4 md:row-span-2 flex flex-col h-full mx-4 md:mx-0">
            <div className="flex justify-between items-center px-2 mb-4">
-            <h3 className="font-bold text-lg text-gray-900 dark:text-white">{t('dash.recent')}</h3>
-            <Link to="/history" className="text-xs text-primary font-medium hover:underline ios-touch-target">{t('dash.viewAll')}</Link>
+            <h2 className="font-bold text-lg text-gray-900 dark:text-white">{t('dash.recent')}</h2>
+            <Link to="/history" className="text-xs text-primary font-bold hover:underline ios-touch-target">{t('dash.viewAll')}</Link>
           </div>
           
           <div className="flex-1 bg-card-light dark:bg-card-dark rounded-[2rem] p-0 md:p-6 md:shadow-sm md:border md:border-gray-100 dark:md:border-white/5 overflow-hidden">
@@ -394,7 +387,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
                    <div className="w-10 h-10 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center mb-2">
                       <Wallet size={18} className="text-gray-400" />
                    </div>
-                   <p className="text-xs text-gray-400 font-medium">{t('dash.noTx')}</p>
+                   <p className="text-xs text-gray-500 font-medium">{t('dash.noTx')}</p>
                 </div>
               ) : (
                 recentTransactions.map((tx, idx) => {
@@ -411,7 +404,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
                         </div>
                         <div>
                           <p className="font-bold text-gray-900 dark:text-white text-xs md:text-sm line-clamp-1">{tx.storeName}</p>
-                          <div className="flex gap-2 text-[10px] text-gray-400 mt-0.5 font-medium">
+                          <div className="flex gap-2 text-[10px] text-gray-600 dark:text-gray-400 mt-0.5 font-medium">
                              <span>{getValidDate(tx.date)?.toLocaleDateString('id-ID', {day:'numeric', month:'short'})}</span>
                              {tx.items && tx.items.length > 0 && <span>• {tx.items.length} Items</span>}
                           </div>
@@ -435,13 +428,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in w-full">
           <div className="bg-card-light dark:bg-card-dark w-full max-w-md rounded-t-[2rem] sm:rounded-[2rem] p-6 shadow-2xl animate-ios-slide-up max-h-[90vh] overflow-y-auto page-slide-up">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Account & Profile</h3>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Account & Profile</h2>
               <button onClick={() => setIsProfileModalOpen(false)} aria-label="Close profile" className="p-2 bg-gray-100 dark:bg-white/10 rounded-full text-gray-500 hover:bg-gray-200 ios-touch-target">
                 <X size={18} />
               </button>
             </div>
             
-            {/* Avatar Section */}
             <div className="flex flex-col items-center mb-6">
               <div className="relative cursor-pointer ios-touch-target" onClick={generateNewAvatar}>
                  <img src={editAvatar} alt="Avatar" className="w-20 h-20 rounded-full border-4 border-gray-100 dark:border-white/10 bg-gray-50 object-cover" />
@@ -451,11 +443,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
               </div>
             </div>
 
-            {/* Google Login Section - MANDATORY FOR SYNC */}
             <div className="mb-6 p-4 bg-gray-50 dark:bg-white/5 rounded-3xl border border-gray-100 dark:border-white/5">
-               <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+               <h3 className="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3 flex items-center gap-2">
                  {t('set.backup')}
-               </h4>
+               </h3>
                
                {user.googleEmail ? (
                  <div className="flex items-center gap-3">
@@ -472,7 +463,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
                  </div>
                ) : (
                  <div className="space-y-3">
-                   <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                   <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
                      {t('set.backup.desc')}
                    </p>
                    <button 
@@ -495,7 +486,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
             
             <div className="space-y-4">
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase ml-3 mb-1 block">Display Name</label>
+                <label className="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase ml-3 mb-1 block">Display Name</label>
                 <input 
                   type="text" 
                   value={editName}
@@ -506,7 +497,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
               </div>
               <button 
                 onClick={handleSaveProfile}
-                className="w-full bg-primary text-white py-3.5 rounded-2xl font-bold text-base shadow-lg shadow-blue-500/30 ios-touch-target hover:bg-blue-600 active:scale-95 transition-all"
+                className="w-full bg-blue-600 text-white py-3.5 rounded-2xl font-bold text-base shadow-lg shadow-blue-500/30 ios-touch-target hover:bg-blue-700 active:scale-95 transition-all"
               >
                 Save Changes
               </button>

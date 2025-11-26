@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Category, Transaction } from '../types';
-import { Moon, Shield, Trash2, Plus, Cloud, FileSpreadsheet, LogOut, Loader2, ArrowRight, Download, Globe, FileText, Folder, ChevronDown, Sliders, Tag, Lock, Check, AlertTriangle } from 'lucide-react';
+import { Moon, Shield, Trash2, Plus, Cloud, FileSpreadsheet, LogOut, Loader2, ArrowRight, Download, Globe, FileText, Folder, ChevronDown, Sliders, Tag, Lock, Check, AlertTriangle, Smile, X, Grid } from 'lucide-react';
 import { googleSheetService } from '../services/googleSheetService';
 import { useLanguage } from '../contexts/LanguageContext';
 import { dbService } from '../services/db';
@@ -23,7 +24,24 @@ interface SettingsProps {
 type ExportPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
 type SettingsSection = 'google' | 'preferences' | 'categories' | 'security' | null;
 
-// --- EXTRACTED COMPONENT TO PREVENT RE-RENDERS ---
+// Curated List of Emojis for Finance App
+const EMOJI_LIST = [
+  // Finance & Work
+  "💰", "💸", "💳", "🏦", "🧾", "💵", "💎", "⚖️", "💼", "📈", "📉", "📎", "💻", "📱", "🖨️",
+  // Food & Drink
+  "🍔", "🍕", "🍜", "🍞", "🥩", "🍗", "🍰", "☕", "🍺", "🍽️", "🥗", "🍣", "🍱", "🍦", "🥤",
+  // Transport
+  "🚗", "🚕", "🚌", "🚑", "🚒", "✈️", "🚀", "⛽", "🚧", "🚦", "🛵", "🚲", "🚂", "🛥️", "🗺️",
+  // Shopping & Clothing
+  "🛍️", "👗", "👕", "👖", "👠", "👓", "💍", "🎒", "🧢", "💄", "👟", "📦", "🎁", "🛒", "🏷️",
+  // Home & Utilities
+  "🏠", "🏢", "🏥", "🏨", "🚿", "💡", "🔌", "🧯", "🧹", "🧻", "🛏️", "🛋️", "🛁", "🔑", "🔧",
+  // Entertainment & Hobbies
+  "🎮", "🎬", "🎧", "🎤", "🎨", "🎳", "🎲", "🧩", "🎫", "🎪", "📚", "⚽", "🏀", "🏋️", "🧘",
+  // Health & Misc
+  "💊", "🩺", "🦷", "🐶", "🐱", "👶", "🎉", "✈️", "🎓", "💒", "⛪", "🕌", "🙏", "❤️", "⭐"
+];
+
 const AccordionItem = ({ title, icon: Icon, subtext, isOpen, onToggle, children }: any) => {
   return (
     <div className={`bg-white dark:bg-[#1C1C1E] rounded-[1.25rem] overflow-hidden transition-all duration-300 border border-gray-100 dark:border-white/5 ${isOpen ? 'shadow-lg ring-1 ring-black/5 dark:ring-white/10' : 'shadow-sm'}`}>
@@ -36,8 +54,8 @@ const AccordionItem = ({ title, icon: Icon, subtext, isOpen, onToggle, children 
             <Icon size={18} strokeWidth={2.5} />
           </div>
           <div className="text-left">
-            <h3 className="font-bold text-sm text-gray-900 dark:text-white tracking-tight">{title}</h3>
-            {!isOpen && subtext && <p className="text-[10px] text-gray-400 mt-0.5 font-medium">{subtext}</p>}
+            <h2 className="font-bold text-sm text-gray-900 dark:text-white tracking-tight">{title}</h2>
+            {!isOpen && subtext && <p className="text-[10px] text-gray-600 dark:text-gray-400 mt-0.5 font-medium">{subtext}</p>}
           </div>
         </div>
         <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${isOpen ? 'bg-gray-100 dark:bg-white/10 rotate-180 text-primary' : 'text-gray-300 dark:text-gray-600'}`}>
@@ -45,7 +63,6 @@ const AccordionItem = ({ title, icon: Icon, subtext, isOpen, onToggle, children 
         </div>
       </button>
       
-      {/* Animated Height Container */}
       {isOpen && (
         <div className="px-4 pb-5 pt-0 animate-accordion-down origin-top">
           <div className="h-px w-full bg-gray-100 dark:bg-white/5 mb-5"></div>
@@ -60,38 +77,33 @@ const Settings: React.FC<SettingsProps> = ({
   user, categories, darkMode, toggleTheme, onAddCategory, onDeleteCategory, updateUser, onImportTransactions, onSyncSettings, addToast
 }) => {
   const { t, language, setLanguage } = useLanguage();
-  
-  // Accordion State
   const [openSection, setOpenSection] = useState<SettingsSection>(null);
-
   const [catTypeFilter, setCatTypeFilter] = useState<'expense' | 'income'>('expense');
   const [newCatName, setNewCatName] = useState('');
   const [newCatIcon, setNewCatIcon] = useState('📦');
   const [newPin, setNewPin] = useState('');
   const [oldPinInput, setOldPinInput] = useState(''); 
-  const [resetPinInput, setResetPinInput] = useState(''); // New state for reset confirmation
+  const [resetPinInput, setResetPinInput] = useState('');
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false); // New modal state
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   
-  // Modal States
   const [showExportModal, setShowExportModal] = useState(false);
   const [showSheetModal, setShowSheetModal] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  
   const [exportPeriod, setExportPeriod] = useState<ExportPeriod>('monthly');
   
-  // Google State
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [foundSheets, setFoundSheets] = useState<Array<{id: string, name: string}>>([]);
   
-  // Folder Selection State
   const [folderQuery, setFolderQuery] = useState('');
   const [foundFolders, setFoundFolders] = useState<Array<{id: string, name: string}>>([]);
   const [selectedFolder, setSelectedFolder] = useState<{id: string, name: string} | null>(null);
-  const [newSheetNameSuffix, setNewSheetNameSuffix] = useState(''); // Custom filename suffix
+  const [newSheetNameSuffix, setNewSheetNameSuffix] = useState('');
 
   useEffect(() => {
-    // Load all transactions for Export
     const loadTx = async () => {
       const tx = await dbService.getAllTransactions();
       setAllTransactions(tx);
@@ -99,7 +111,6 @@ const Settings: React.FC<SettingsProps> = ({
     loadTx();
   }, []);
 
-  // Filter Categories
   const filteredCategories = categories.filter(c => c.type === catTypeFilter);
 
   const toggleSection = (section: SettingsSection) => {
@@ -115,6 +126,7 @@ const Settings: React.FC<SettingsProps> = ({
       type: catTypeFilter
     });
     setNewCatName('');
+    setNewCatIcon('📦'); // Reset to default
   };
 
   const handleSavePinClick = () => {
@@ -127,14 +139,11 @@ const Settings: React.FC<SettingsProps> = ({
   };
 
   const verifyAndSavePin = async () => {
-    // Security Fix: Hash input to compare with stored hash
     const hashedOld = await hashPin(oldPinInput);
-    if (hashedOld !== user.pin && oldPinInput !== user.pin) { // Check hash OR fallback to plain text if migration failed
+    if (hashedOld !== user.pin && oldPinInput !== user.pin) { 
       addToast('Wrong Old PIN', 'error');
       return;
     }
-    
-    // Security Fix: Hash new PIN before saving
     const hashedNew = await hashPin(newPin);
     updateUser({ pin: hashedNew });
     setNewPin('');
@@ -143,42 +152,32 @@ const Settings: React.FC<SettingsProps> = ({
   };
 
   const handleResetData = async () => {
-     // Security Fix: Hash input to compare
      const hashedInput = await hashPin(resetPinInput);
-     
      if (hashedInput !== user.pin && resetPinInput !== user.pin) {
         addToast('PIN Salah!', 'error');
         return;
      }
 
      try {
-        // 1. Clear Local DB
         await dbService.clearAllTransactions();
-        
-        // 2. Clear Google Sheet if connected
         if (user.googleSheetId) {
              addToast('Clearing Cloud Data...', 'info');
              await googleSheetService.clearAllData(user.googleSheetId);
         }
-
-        // 3. Refresh State (Reload page is easiest to reset all memory states)
         addToast('Semua data berhasil direset.', 'success');
         setTimeout(() => {
            window.location.reload();
         }, 1500);
-
      } catch (e) {
         console.error(e);
         addToast('Gagal mereset data.', 'error');
      }
   };
 
-  // --- EXPORT ---
   const filterTransactionsByPeriod = (txs: Transaction[], period: ExportPeriod): Transaction[] => {
     const now = new Date();
     return txs.filter(tx => {
       const txDate = new Date(tx.date);
-      
       switch (period) {
         case 'daily':
           return txDate.getDate() === now.getDate() && 
@@ -208,7 +207,6 @@ const Settings: React.FC<SettingsProps> = ({
       return;
     }
     
-    // Create a label for the period
     let periodLabel = '';
     const now = new Date();
     if (exportPeriod === 'daily') periodLabel = `Harian (${now.toLocaleDateString('id-ID')})`;
@@ -220,7 +218,6 @@ const Settings: React.FC<SettingsProps> = ({
       if (type === 'excel') exportService.toExcel(filteredData, user, periodLabel);
       else if (type === 'pdf') exportService.toPDF(filteredData, user, periodLabel);
       else if (type === 'docx') exportService.toDocx(filteredData, user, periodLabel);
-      
       addToast('Laporan berhasil diunduh', 'success');
       setShowExportModal(false);
     } catch (e) {
@@ -229,7 +226,6 @@ const Settings: React.FC<SettingsProps> = ({
     }
   };
 
-  // --- GOOGLE ---
   const handleConnectGoogle = async () => {
     if (!googleSheetService.isConfigured) {
       addToast("System Error: Google Client ID is missing.", "error");
@@ -285,21 +281,17 @@ const Settings: React.FC<SettingsProps> = ({
 
   const handleCreateSheet = async () => {
     if (!newSheetNameSuffix.trim()) return;
-
     setIsGoogleLoading(true);
     const fullName = `EZFin Tracker - ${newSheetNameSuffix.trim()}`;
-    
     try {
       const sheet = await googleSheetService.createSpreadsheet(
         fullName, 
         selectedFolder?.id
       );
-      // Immediately save current settings to the new sheet
       await onSyncSettings(sheet.id);
-      
       updateUser({ googleSheetId: sheet.id, googleSheetName: sheet.name });
       setShowSheetModal(false);
-      setNewSheetNameSuffix(''); // Reset
+      setNewSheetNameSuffix('');
       addToast("New Spreadsheet Created!", "success");
     } catch (e) {
       addToast("Failed to create sheet", "error");
@@ -311,12 +303,8 @@ const Settings: React.FC<SettingsProps> = ({
   const handleSelectSheet = async (sheet: {id: string, name: string}) => {
     setIsGoogleLoading(true);
     try {
-        // First try to fetch/sync settings from the sheet
         await onSyncSettings(sheet.id);
-        
-        // Then update the user profile with the sheet ID
         updateUser({ googleSheetId: sheet.id, googleSheetName: sheet.name });
-        
         setShowSheetModal(false);
         addToast("Spreadsheet Linked!", "success");
     } catch(e) {
@@ -332,8 +320,6 @@ const Settings: React.FC<SettingsProps> = ({
     try {
       const txs = await googleSheetService.fetchTransactions(user.googleSheetId);
       onImportTransactions(txs);
-      
-      // Also sync settings
       await onSyncSettings(user.googleSheetId);
     } catch (e) {
       console.error(e);
@@ -357,14 +343,12 @@ const Settings: React.FC<SettingsProps> = ({
   return (
     <div className="pt-safe min-h-screen bg-[#F2F2F7] dark:bg-black page-transition pb-28 md:pb-10">
       
-      {/* iOS Large Title */}
       <div className="px-6 py-6 pb-2">
         <h1 className="text-2xl font-extrabold text-black dark:text-white tracking-tight">{t('set.title')}</h1>
       </div>
 
       <div className="p-4 space-y-4 max-w-4xl mx-auto">
         
-        {/* EXPORT (Hero Action) */}
         <button 
            onClick={() => setShowExportModal(true)}
            className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-[1.5rem] p-5 shadow-xl shadow-emerald-500/20 flex items-center justify-between ios-touch-target group"
@@ -374,7 +358,7 @@ const Settings: React.FC<SettingsProps> = ({
                  <Download size={22} />
               </div>
               <div className="text-left">
-                 <p className="font-bold text-lg tracking-tight">{t('set.export')}</p>
+                 <p className="font-bold text-lg tracking-tight">{t('set.export')} (PDF/Excel)</p>
                  <p className="text-xs text-emerald-100 font-medium opacity-90">{t('set.export.desc')}</p>
               </div>
            </div>
@@ -383,7 +367,6 @@ const Settings: React.FC<SettingsProps> = ({
            </div>
         </button>
 
-        {/* SETTINGS GROUP - Dropdowns */}
         <div className="space-y-3">
           
           {/* 1. GOOGLE ACCOUNT */}
@@ -399,13 +382,13 @@ const Settings: React.FC<SettingsProps> = ({
                   <div className="w-14 h-14 bg-blue-50 dark:bg-white/5 rounded-full flex items-center justify-center text-primary mb-1">
                      <Cloud size={28} />
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs mx-auto leading-relaxed">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 max-w-xs mx-auto leading-relaxed">
                     {t('set.backup.desc')}
                   </p>
                   <button 
                     onClick={handleConnectGoogle}
                     disabled={isGoogleLoading}
-                    className="w-full bg-primary text-white py-3.5 rounded-2xl font-bold shadow-lg shadow-blue-500/30 ios-touch-target flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale hover:bg-blue-600 transition-colors text-sm"
+                    className="w-full bg-blue-600 text-white py-3.5 rounded-2xl font-bold shadow-lg shadow-blue-500/30 ios-touch-target flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale hover:bg-blue-700 transition-colors text-sm"
                   >
                     {isGoogleLoading ? <Loader2 className="animate-spin" /> : <ArrowRight size={18} />}
                     {t('set.signin')}
@@ -430,11 +413,11 @@ const Settings: React.FC<SettingsProps> = ({
                   </div>
 
                   <div>
-                    <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-2 ml-1 tracking-wider">{t('set.sheet')}</h4>
+                    <h3 className="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase mb-2 ml-1 tracking-wider">{t('set.sheet')}</h3>
                     {!user.googleSheetId ? (
                         <button 
                           onClick={handleChangeSheet}
-                          className="w-full border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex flex-col items-center justify-center text-gray-400 hover:border-primary hover:text-primary transition-all gap-1.5 bg-gray-50/50 dark:bg-white/5 ios-touch-target"
+                          className="w-full border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex flex-col items-center justify-center text-gray-500 hover:border-primary hover:text-primary transition-all gap-1.5 bg-gray-50/50 dark:bg-white/5 ios-touch-target"
                         >
                           <FileSpreadsheet size={24} />
                           <span className="font-bold text-xs">Select or Create Sheet</span>
@@ -485,8 +468,8 @@ const Settings: React.FC<SettingsProps> = ({
                       <span className="font-bold text-xs text-gray-900 dark:text-white">{t('set.lang')}</span>
                     </div>
                     <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
-                      <button onClick={() => setLanguage('id')} className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ios-touch-target ${language === 'id' ? 'bg-white dark:bg-gray-600 shadow-sm text-primary' : 'text-gray-400'}`}>ID</button>
-                      <button onClick={() => setLanguage('en')} className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ios-touch-target ${language === 'en' ? 'bg-white dark:bg-gray-600 shadow-sm text-primary' : 'text-gray-400'}`}>EN</button>
+                      <button onClick={() => setLanguage('id')} className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ios-touch-target ${language === 'id' ? 'bg-white dark:bg-gray-600 shadow-sm text-primary' : 'text-gray-500'}`}>ID</button>
+                      <button onClick={() => setLanguage('en')} className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ios-touch-target ${language === 'en' ? 'bg-white dark:bg-gray-600 shadow-sm text-primary' : 'text-gray-500'}`}>EN</button>
                     </div>
                 </div>
                 <div className="flex items-center justify-between p-2">
@@ -512,8 +495,8 @@ const Settings: React.FC<SettingsProps> = ({
             onToggle={() => toggleSection('categories')}
           >
               <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1 mb-4">
-                  <button onClick={() => setCatTypeFilter('expense')} className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ios-touch-target ${catTypeFilter === 'expense' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-400'}`}>{t('add.expense')}</button>
-                  <button onClick={() => setCatTypeFilter('income')} className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ios-touch-target ${catTypeFilter === 'income' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-400'}`}>{t('add.income')}</button>
+                  <button onClick={() => setCatTypeFilter('expense')} className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ios-touch-target ${catTypeFilter === 'expense' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}>{t('add.expense')}</button>
+                  <button onClick={() => setCatTypeFilter('income')} className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ios-touch-target ${catTypeFilter === 'income' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}>{t('add.income')}</button>
               </div>
               
               <div className="grid grid-cols-1 gap-2 max-h-56 overflow-y-auto no-scrollbar pr-1">
@@ -529,7 +512,13 @@ const Settings: React.FC<SettingsProps> = ({
               </div>
 
               <div className="mt-4 flex gap-2 pt-4 border-t border-gray-100 dark:border-gray-800">
-                <input value={newCatIcon} onChange={e => setNewCatIcon(e.target.value)} className="w-10 h-10 text-center bg-gray-50 dark:bg-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary font-bold text-lg border border-gray-100 dark:border-white/10" />
+                {/* Visual Emoji Picker Button */}
+                <button 
+                  onClick={() => setShowEmojiPicker(true)}
+                  className="w-10 h-10 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-white/10 flex items-center justify-center text-xl hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ios-touch-target"
+                >
+                  {newCatIcon}
+                </button>
                 <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="New Category..." className="flex-1 px-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary font-medium dark:text-white border border-gray-100 dark:border-white/10" />
                 <button onClick={handleAddCategoryClick} aria-label="Add category" className="w-10 h-10 bg-black dark:bg-white text-white dark:text-black rounded-xl flex items-center justify-center ios-touch-target shadow-lg"><Plus size={20}/></button>
               </div>
@@ -564,14 +553,13 @@ const Settings: React.FC<SettingsProps> = ({
                     <button 
                       onClick={handleSavePinClick} 
                       disabled={newPin.length !== 6} 
-                      className="w-full bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-50 shadow-lg shadow-blue-500/30 ios-touch-target hover:bg-blue-600 transition-colors text-xs"
+                      className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl disabled:opacity-50 shadow-lg shadow-blue-500/30 ios-touch-target hover:bg-blue-700 transition-colors text-xs"
                     >
                       {t('set.updatePin')}
                     </button>
                   </div>
                 </div>
 
-                {/* Reset Data Button */}
                 <div className="w-full pt-6 border-t border-gray-100 dark:border-white/5">
                    <button 
                      onClick={() => { setResetPinInput(''); setIsResetConfirmOpen(true); }}
@@ -580,7 +568,7 @@ const Settings: React.FC<SettingsProps> = ({
                      <AlertTriangle size={14} />
                      Reset Data Transaksi
                    </button>
-                   <p className="text-[10px] text-gray-400 text-center mt-2">
+                   <p className="text-[10px] text-gray-500 dark:text-gray-400 text-center mt-2">
                      Menghapus semua riwayat transaksi dari perangkat dan cloud.
                    </p>
                 </div>
@@ -590,11 +578,10 @@ const Settings: React.FC<SettingsProps> = ({
         </div>
       </div>
 
-      {/* Confirmation Modal (PIN Change) */}
       {isConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 w-full">
            <div className="bg-white dark:bg-[#1C1C1E] w-full max-w-xs p-6 rounded-[2rem] shadow-2xl animate-shake text-center page-slide-up">
-              <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-white">Verify Old PIN</h3>
+              <h2 className="font-bold text-lg mb-2 text-gray-900 dark:text-white">Verify Old PIN</h2>
               <p className="text-xs text-gray-500 mb-6">Please enter your current PIN to confirm.</p>
               <input 
                 autoFocus
@@ -609,20 +596,19 @@ const Settings: React.FC<SettingsProps> = ({
               />
               <div className="flex gap-3">
                 <button onClick={() => setIsConfirmOpen(false)} className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 rounded-xl font-bold text-xs text-gray-600 dark:text-gray-300 ios-touch-target">{t('common.cancel')}</button>
-                <button onClick={verifyAndSavePin} disabled={oldPinInput.length !== 6} className="flex-1 py-2.5 bg-primary text-white rounded-xl font-bold text-xs disabled:opacity-50 ios-touch-target">{t('common.confirm')}</button>
+                <button onClick={verifyAndSavePin} disabled={oldPinInput.length !== 6} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-xs disabled:opacity-50 ios-touch-target">{t('common.confirm')}</button>
               </div>
            </div>
         </div>
       )}
 
-      {/* Reset Data Confirmation Modal */}
       {isResetConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 w-full">
            <div className="bg-white dark:bg-[#1C1C1E] w-full max-w-xs p-6 rounded-[2rem] shadow-2xl animate-shake text-center page-slide-up border border-red-100 dark:border-red-900/30">
               <div className="w-12 h-12 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
                  <Trash2 size={24} />
               </div>
-              <h3 className="font-bold text-lg mb-2 text-red-600 dark:text-red-500">Hapus Semua Data?</h3>
+              <h2 className="font-bold text-lg mb-2 text-red-600 dark:text-red-500">Hapus Semua Data?</h2>
               <p className="text-xs text-gray-500 mb-6">
                 Masukkan PIN Anda untuk konfirmasi penghapusan seluruh data transaksi. Tindakan ini tidak dapat dibatalkan.
               </p>
@@ -646,14 +632,13 @@ const Settings: React.FC<SettingsProps> = ({
         </div>
       )}
 
-      {/* Export Modal with Period Selector */}
+      {/* Export Modal */}
       {showExportModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-ios-fade-in">
           <div className="bg-white dark:bg-[#1C1C1E] w-full max-w-sm rounded-[2rem] p-6 shadow-2xl page-slide-up">
-            <h3 className="text-lg font-bold text-center mb-1 dark:text-white">{t('set.export')}</h3>
+            <h2 className="text-lg font-bold text-center mb-1 dark:text-white">{t('set.export')}</h2>
             <p className="text-center text-xs text-gray-400 mb-5">Pilih periode laporan</p>
 
-            {/* Time Range Selector */}
             <div className="grid grid-cols-2 gap-2 mb-5">
                {(['daily', 'weekly', 'monthly', 'yearly'] as const).map(period => (
                  <button
@@ -690,19 +675,18 @@ const Settings: React.FC<SettingsProps> = ({
         </div>
       )}
 
-      {/* Google Sheet Selection Modal */}
+      {/* Sheet Selection Modal */}
       {showSheetModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-ios-fade-in">
           <div className="bg-white dark:bg-[#1C1C1E] w-full max-w-md rounded-[2rem] p-6 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] page-slide-up">
-            <h3 className="text-lg font-bold text-center mb-1 dark:text-white">Setup Google Sheets</h3>
+            <h2 className="text-lg font-bold text-center mb-1 dark:text-white">Setup Google Sheets</h2>
             <p className="text-center text-xs text-gray-500 mb-5">Choose where to save your data</p>
             
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-5">
               
               <div className="space-y-4">
-                 <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Create New</h4>
+                 <h3 className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Create New</h3>
                  
-                 {/* Folder Selector */}
                  <div className="relative">
                    <div className="flex items-center gap-2 bg-gray-50 dark:bg-black/20 p-2 rounded-xl border border-gray-100 dark:border-gray-800">
                       <Folder size={16} className="text-gray-400 ml-1" />
@@ -734,9 +718,8 @@ const Settings: React.FC<SettingsProps> = ({
                    )}
                  </div>
 
-                 {/* Custom Filename Input */}
                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 mb-1.5 block">Filename</label>
+                    <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1.5 block">Filename</label>
                     <div className="flex items-center bg-gray-50 dark:bg-black/20 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
                         <div className="bg-gray-100 dark:bg-white/5 px-3 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700 select-none whitespace-nowrap">
                           EZFin Tracker -
@@ -753,7 +736,7 @@ const Settings: React.FC<SettingsProps> = ({
                  <button 
                   onClick={handleCreateSheet}
                   disabled={isGoogleLoading || !newSheetNameSuffix.trim()}
-                  className="w-full bg-primary text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20 ios-touch-target transition-transform flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:grayscale"
+                  className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20 ios-touch-target transition-transform flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:grayscale"
                 >
                   {isGoogleLoading ? <Loader2 className="animate-spin" /> : <Plus size={18} />}
                   Create File {selectedFolder ? `in "${selectedFolder.name}"` : ''}
@@ -762,13 +745,13 @@ const Settings: React.FC<SettingsProps> = ({
 
               <div className="relative flex py-1 items-center">
                 <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
-                <span className="flex-shrink-0 mx-4 text-gray-400 text-[10px] font-bold">OR SELECT EXISTING</span>
+                <span className="flex-shrink-0 mx-4 text-gray-500 dark:text-gray-400 text-[10px] font-bold">OR SELECT EXISTING</span>
                 <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
               </div>
 
               <div className="space-y-2">
                 {foundSheets.length === 0 ? (
-                  <p className="text-center text-xs text-gray-400 py-4">No matching sheets found.</p>
+                  <p className="text-center text-xs text-gray-500 py-4">No matching sheets found.</p>
                 ) : (
                   foundSheets.map(sheet => (
                     <button 
@@ -784,10 +767,54 @@ const Settings: React.FC<SettingsProps> = ({
               </div>
             </div>
             
-            <button onClick={() => setShowSheetModal(false)} className="mt-4 text-gray-400 text-xs font-medium hover:text-gray-600 ios-touch-target">
+            <button onClick={() => setShowSheetModal(false)} className="mt-4 text-gray-500 dark:text-gray-400 text-xs font-medium hover:text-gray-700 ios-touch-target">
               {t('common.cancel')}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Emoji Picker Bottom Sheet Modal */}
+      {showEmojiPicker && (
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center">
+           <div 
+             className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in"
+             onClick={() => setShowEmojiPicker(false)}
+           ></div>
+
+           <div className="relative w-full max-w-lg bg-white dark:bg-[#1C1C1E] rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl animate-ios-slide-up flex flex-col max-h-[75vh] m-0 sm:m-4">
+              {/* Drag Handle for Mobile */}
+              <div className="flex justify-center pt-3 pb-1 sm:hidden" onClick={() => setShowEmojiPicker(false)}>
+                 <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></div>
+              </div>
+              
+              <div className="px-6 py-4 flex justify-between items-center border-b border-gray-100 dark:border-white/5">
+                 <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Smile size={18} className="text-yellow-500" />
+                    Pilih Ikon
+                 </h2>
+                 <button onClick={() => setShowEmojiPicker(false)} aria-label="Tutup" className="bg-gray-100 dark:bg-white/10 p-2 rounded-full ios-touch-target hover:bg-gray-200 dark:hover:bg-white/20 transition-colors">
+                    <X size={16} className="text-gray-500 dark:text-gray-300" />
+                 </button>
+              </div>
+
+              <div className="overflow-y-auto p-4 pb-safe">
+                 <div className="grid grid-cols-6 sm:grid-cols-8 gap-3">
+                    {EMOJI_LIST.map((emoji, idx) => (
+                       <button
+                         key={idx}
+                         onClick={() => {
+                            setNewCatIcon(emoji);
+                            setShowEmojiPicker(false);
+                         }}
+                         className="w-full aspect-square flex items-center justify-center text-2xl bg-gray-50 dark:bg-white/5 rounded-xl hover:bg-gray-200 dark:hover:bg-white/20 transition-all active:scale-95 ios-touch-target"
+                       >
+                          {emoji}
+                       </button>
+                    ))}
+                 </div>
+              </div>
+           </div>
         </div>
       )}
 

@@ -15,7 +15,7 @@ const Sidebar: React.FC = () => {
       className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group ${
         isActive(to) 
           ? 'bg-primary text-white shadow-lg shadow-blue-500/30' 
-          : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 dark:text-gray-400'
+          : 'text-gray-600 hover:bg-gray-100 dark:hover:bg-white/10 dark:text-gray-400'
       }`}
     >
       <Icon size={18} className={isActive(to) ? '' : 'group-hover:scale-110 transition-transform'} />
@@ -35,7 +35,7 @@ const Sidebar: React.FC = () => {
         />
         <div>
           <h1 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">EZFin</h1>
-          <p className="text-[8px] font-medium text-gray-400 uppercase tracking-widest">AutoMate</p>
+          <p className="text-[8px] font-medium text-gray-600 dark:text-gray-400 uppercase tracking-widest">AutoMate</p>
         </div>
       </div>
 

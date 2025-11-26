@@ -32,10 +32,8 @@ const PinScreen: React.FC<PinScreenProps> = ({ correctPin, onSuccess }) => {
     if (val.length === 6) {
       setIsChecking(true);
       // Security Fix: Hash input before comparing to stored PIN
-      // This prevents plain text comparison if the stored PIN is hashed (which it should be)
       const hashedInput = await hashPin(val);
       
-      // Fallback: If stored PIN length < 64, it's old plaintext (handled by App.tsx migration usually, but safety check here)
       const isValid = hashedInput === correctPin || val === correctPin;
 
       if (isValid) {
@@ -55,14 +53,13 @@ const PinScreen: React.FC<PinScreenProps> = ({ correctPin, onSuccess }) => {
     }
   };
 
-  // Ensure focus is kept on the input if user clicks anywhere on the screen
   const handleContainerClick = () => {
     inputRef.current?.focus();
   };
 
   return (
-    <div 
-      className="fixed inset-0 bg-primary dark:bg-dark z-[100] flex flex-col items-center justify-center text-white p-6 animate-ios-fade-in"
+    <main 
+      className="fixed inset-0 bg-blue-600 dark:bg-black z-[100] flex flex-col items-center justify-center text-white p-6 animate-ios-fade-in"
       onClick={handleContainerClick}
     >
       <div className="flex flex-col items-center mb-10 transition-all duration-500">
@@ -74,12 +71,13 @@ const PinScreen: React.FC<PinScreenProps> = ({ correctPin, onSuccess }) => {
           />
         </div>
         <h1 className="text-3xl font-bold tracking-tight mb-2">EZFin AutoMate</h1>
-        <p className="text-white/70 text-base font-medium">Masukkan 6-digit PIN Anda</p>
+        {/* IMPROVED CONTRAST: text-white on blue-600 is WCAG compliant */}
+        <p className="text-white text-base font-medium">Masukkan 6-digit PIN Anda</p>
       </div>
 
       {/* 
         Invisible Input covering the screen to capture taps and keystrokes 
-        This triggers the mobile keyboard naturally.
+        Added aria-label for accessibility
       */}
       <input
         ref={inputRef}
@@ -93,6 +91,7 @@ const PinScreen: React.FC<PinScreenProps> = ({ correctPin, onSuccess }) => {
         className="absolute inset-0 w-full h-full opacity-0 cursor-default"
         autoFocus
         autoComplete="off"
+        aria-label="PIN Entry"
       />
 
       {/* Visual Dots Feedback */}
@@ -109,11 +108,11 @@ const PinScreen: React.FC<PinScreenProps> = ({ correctPin, onSuccess }) => {
         ))}
       </div>
       
-      {/* Footer hint */}
-      <div className="absolute bottom-10 text-white/30 text-xs font-medium uppercase tracking-widest animate-pulse pointer-events-none">
+      {/* Footer hint - Improved contrast */}
+      <div className="absolute bottom-10 text-white/90 text-xs font-medium uppercase tracking-widest animate-pulse pointer-events-none">
         Build with &#x2764;&#xFE0F; by Yusathid
       </div>
-    </div>
+    </main>
   );
 };
 

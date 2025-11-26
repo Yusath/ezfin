@@ -121,4 +121,4 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 
-*Built with ❤️ for Students.*
+*Built with ❤️ By Yusathid.*

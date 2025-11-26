@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { Transaction, UserProfile, ToastMessage, Category } from './types';
@@ -98,9 +99,29 @@ function App() {
         setTransactions(loadedTxs);
         
         // Init Google Service with Auto Restore from SESSION storage
-        googleSheetService.initClient((success) => {
+        googleSheetService.initClient(async (success) => {
           if (success) {
              console.log("Google Services Initialized");
+             
+             // PERSISTENT LOGIN CHECK
+             // If service restored a session, fetch user info to update UI
+             if (googleSheetService.hasValidSession) {
+                const token = googleSheetService.getToken();
+                if (token) {
+                   try {
+                     const userInfo = await googleSheetService.getUserInfo(token);
+                     setUser(prev => ({
+                       ...prev,
+                       googleEmail: userInfo.email,
+                       googlePhotoUrl: userInfo.picture
+                     }));
+                     console.log("Session restored: User logged in.");
+                   } catch (e) {
+                     console.warn("Restored session invalid", e);
+                     googleSheetService.signOut();
+                   }
+                }
+             }
           }
         });
 

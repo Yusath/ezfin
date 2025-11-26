@@ -11,7 +11,7 @@ declare global {
 
 // User provided Client ID
 const DEFAULT_CLIENT_ID = "28569786950-2lnehaar8vn0cueo4gpav84umuc30kc1.apps.googleusercontent.com";
-// CHANGED: Key for session storage
+// CHANGED: Key for local storage
 const TOKEN_STORAGE_KEY = 'ezfin_google_access_token';
 
 // Initial load from Env or LocalStorage (Config persists, Token does not)
@@ -49,6 +49,11 @@ export const googleSheetService = {
 
   get hasValidSession() {
     return !!accessToken;
+  },
+
+  // Helper to get token for App.tsx restoration logic
+  getToken: () => {
+    return accessToken;
   },
 
   updateCredentials: (clientId: string, apiKey?: string) => {
@@ -122,8 +127,8 @@ export const googleSheetService = {
             throw (resp);
           }
           accessToken = resp.access_token;
-          // CHANGED: Save to SessionStorage (Clears on tab close)
-          sessionStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
+          // CHANGED: Save to localStorage for persistence across tabs/refresh
+          localStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
           
           // CRITICAL FIX: Manually set the token for GAPI
           if (window.gapi && window.gapi.client) {
@@ -133,10 +138,10 @@ export const googleSheetService = {
       });
 
       // --- AUTO RESTORE SESSION LOGIC ---
-      // CHANGED: Restore from SessionStorage
-      const savedToken = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+      // CHANGED: Restore from localStorage
+      const savedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
       if (savedToken) {
-          console.log("Restoring Google Session from SessionStorage...");
+          console.log("Restoring Google Session from LocalStorage...");
           accessToken = savedToken;
           if (window.gapi && window.gapi.client) {
              // We construct a fake token object that GAPI expects
@@ -166,8 +171,8 @@ export const googleSheetService = {
                 reject(resp);
             } else {
                 accessToken = resp.access_token;
-                // CHANGED: Save to SessionStorage
-                sessionStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
+                // CHANGED: Save to localStorage
+                localStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
 
                 // CRITICAL FIX: Bind the token to GAPI client immediately
                 if (window.gapi && window.gapi.client) {
@@ -195,11 +200,16 @@ export const googleSheetService = {
   signOut: () => {
     const token = window.gapi?.client?.getToken();
     if (token !== null) {
-      window.google?.accounts?.oauth2?.revoke(token.access_token, () => {});
+      // Best effort revoke
+      try {
+        window.google?.accounts?.oauth2?.revoke(token.access_token, () => {});
+      } catch (e) {
+        console.warn("Revoke failed (token might be invalid already)");
+      }
     }
     window.gapi?.client?.setToken(null); // Clear GAPI token
-    // CHANGED: Clear from SessionStorage
-    sessionStorage.removeItem(TOKEN_STORAGE_KEY); 
+    // CHANGED: Clear from localStorage
+    localStorage.removeItem(TOKEN_STORAGE_KEY); 
     accessToken = null;
   },
 

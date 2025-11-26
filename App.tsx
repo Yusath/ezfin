@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { Transaction, UserProfile, ToastMessage, Category } from './types';
@@ -14,6 +15,7 @@ import Settings from './pages/Settings';
 import HistoryPage from './pages/History';
 import { googleSheetService } from './services/googleSheetService';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { hashPin } from './utils/security';
 
 const EditTransactionWrapper = ({ transactions, categories, onSave, addToast }: any) => {
   const { id } = useParams();
@@ -81,6 +83,15 @@ function App() {
       try {
         const { user: loadedUser, categories: loadedCats } = await dbService.initDefaultsIfNeeded(DEFAULT_USER_PROFILE);
         const loadedTxs = await dbService.getAllTransactions();
+
+        // SECURITY MIGRATION: Check if PIN is plain text (length < 64 for sha256 hex)
+        // If so, hash it immediately and save back to DB
+        if (loadedUser.pin.length < 64) {
+           console.log("Migrating Plain Text PIN to Hash...");
+           const hashed = await hashPin(loadedUser.pin);
+           loadedUser.pin = hashed;
+           await dbService.saveUser(loadedUser);
+        }
 
         setUser(loadedUser);
         setCategories(loadedCats);
@@ -157,7 +168,7 @@ function App() {
         googleSheetService.appendTransaction(user.googleSheetId, newTx)
           .then(() => addToast('Transaction saved & synced to Drive!', 'success'))
           .catch((e) => {
-             console.error("Sync Error", e);
+             console.error("Sync Error"); // Secure log
              if (e.message === 'UNAUTHENTICATED') {
                addToast('Sesi Google berakhir. Mohon login ulang di Settings.', 'error');
              } else {
@@ -183,7 +194,7 @@ function App() {
         googleSheetService.updateTransaction(user.googleSheetId, updatedTx)
           .then(() => addToast('Transaction updated & synced!', 'success'))
           .catch((e) => {
-             console.error("Sync Edit Error", e);
+             console.error("Sync Edit Error");
              addToast('Updated locally, but Google Sync failed.', 'info');
           });
       } else {
@@ -207,7 +218,7 @@ function App() {
          googleSheetService.deleteTransactions(user.googleSheetId, ids)
            .then(() => addToast(`${ids.length} Transaction(s) deleted.`, 'success'))
            .catch((e) => {
-             console.error("Delete Sync Error", e);
+             console.error("Delete Sync Error");
              addToast('Deleted locally, but Cloud sync failed.', 'info');
            });
       } else {
@@ -246,7 +257,7 @@ function App() {
       // Only toast on completion to avoid spam
       // addToast('Sync Complete!', 'success');
     } catch (error: any) {
-      console.error("Auto Sync Failed", error);
+      console.error("Auto Sync Failed");
       if (error.message === 'UNAUTHENTICATED' || error.message === 'Not logged in') {
          googleSheetService.signOut(); 
          addToast('Sesi Google berakhir. Mohon login ulang di Settings.', 'error');
@@ -278,8 +289,16 @@ function App() {
         if (cloudSettings) {
             let hasChanges = false;
             
+            // SECURITY: If cloud PIN is different AND looks like a valid hash (or force update locally if cloud is master)
+            // If cloud PIN is plain text (migrating from old device), we should hash it locally
             if (cloudSettings.pin && cloudSettings.pin !== user.pin) {
-                await handleUpdateProfile({ pin: cloudSettings.pin });
+                let pinToSave = cloudSettings.pin;
+                if (pinToSave.length < 64) {
+                    // Cloud has plain text, Hash it
+                    pinToSave = await hashPin(pinToSave);
+                }
+                
+                await handleUpdateProfile({ pin: pinToSave });
                 hasChanges = true;
             }
             
@@ -302,7 +321,7 @@ function App() {
             return false;
         }
     } catch (e: any) {
-        console.error(e);
+        console.error("Settings Sync error");
         if (e.message !== 'UNAUTHENTICATED') {
             // Suppress error toast for background syncs to avoid annoyance
         } else {

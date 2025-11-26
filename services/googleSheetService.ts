@@ -1,4 +1,5 @@
 
+
 import { Transaction, TransactionItem, Category } from "../types";
 
 declare global {
@@ -147,7 +148,7 @@ export const googleSheetService = {
       onInitComplete(true);
 
     } catch (error) {
-      console.error("Failed to initialize Google Services:", error);
+      console.error("Failed to initialize Google Services");
       onInitComplete(false);
     }
   },
@@ -215,7 +216,7 @@ export const googleSheetService = {
         picture: data.picture
       };
     } catch (error) {
-      console.error("Failed to fetch user info", error);
+      console.error("Failed to fetch user info");
       throw error;
     }
   },
@@ -232,7 +233,7 @@ export const googleSheetService = {
        });
        return response.result.files;
      } catch (error: any) {
-       console.error("Folder search failed", error);
+       console.error("Folder search failed");
        if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
        return [];
      }
@@ -311,7 +312,7 @@ export const googleSheetService = {
 
       return { id: spreadsheetId, name: title };
     } catch (error: any) {
-      console.error("Error creating sheet", error);
+      console.error("Error creating sheet");
       if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
       throw error;
     }
@@ -347,7 +348,7 @@ export const googleSheetService = {
         },
       });
     } catch (error: any) {
-      console.error("Error appending row", error);
+      console.error("Error appending row");
       if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
       throw error;
     }
@@ -391,7 +392,7 @@ export const googleSheetService = {
       });
       
     } catch (error: any) {
-       console.error("Update failed", error);
+       console.error("Update failed");
        if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
        throw error;
     }
@@ -423,7 +424,7 @@ export const googleSheetService = {
         },
       });
     } catch (error: any) {
-      console.error("Error bulk appending", error);
+      console.error("Error bulk appending");
       if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
       throw error;
     }
@@ -439,7 +440,7 @@ export const googleSheetService = {
             range: 'Sheet1!A2:Z10000', 
         });
     } catch (error: any) {
-        console.error("Clear failed", error);
+        console.error("Clear failed");
         if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
         throw error;
     }
@@ -454,7 +455,7 @@ export const googleSheetService = {
         });
         return response.result.files;
     } catch (error: any) {
-        console.error("Search failed", error);
+        console.error("Search failed");
         if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
         return [];
     }
@@ -520,7 +521,7 @@ export const googleSheetService = {
       });
 
     } catch (error: any) {
-      console.error("Fetch transactions failed", error);
+      console.error("Fetch transactions failed");
       if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
       throw error;
     }
@@ -580,7 +581,7 @@ export const googleSheetService = {
       });
 
     } catch (error: any) {
-      console.error("Error deleting transactions", error);
+      console.error("Error deleting transactions");
       if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
       throw error;
     }
@@ -611,7 +612,7 @@ export const googleSheetService = {
           });
       }
     } catch (e: any) {
-      console.error("Failed to ensure settings sheet", e);
+      console.error("Failed to ensure settings sheet");
       if (e?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
     }
   },
@@ -626,7 +627,7 @@ export const googleSheetService = {
             resource: { values: [[pin, JSON.stringify(categories), darkMode.toString()]] }
         });
       } catch (e: any) {
-        console.error("Failed to save app settings", e);
+        console.error("Failed to save app settings");
         if (e?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
       }
   },
@@ -656,7 +657,7 @@ export const googleSheetService = {
               darkMode: darkMode
           };
       } catch (e: any) {
-          console.warn("Settings sheet missing or empty", e);
+          console.warn("Settings sheet missing or empty");
           if (e?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
           return null;
       }

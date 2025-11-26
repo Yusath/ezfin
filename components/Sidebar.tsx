@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Home, History, Plus, PieChart, Settings, Wallet } from 'lucide-react';
+import { Home, History, Plus, PieChart, Settings } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -27,9 +28,11 @@ const Sidebar: React.FC = () => {
       
       {/* Brand */}
       <div className="flex items-center gap-3 mb-8 px-2">
-        <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
-          <Wallet size={16} strokeWidth={2.5} />
-        </div>
+        <img 
+          src="https://i.ibb.co.com/KcRpsp15/Untitled-design.png" 
+          alt="EZFin Logo" 
+          className="w-10 h-10 rounded-xl shadow-md object-cover"
+        />
         <div>
           <h1 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">EZFin</h1>
           <p className="text-[8px] font-medium text-gray-400 uppercase tracking-widest">AutoMate</p>

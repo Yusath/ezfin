@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Category, Transaction } from '../types';
 import { Moon, Shield, Trash2, Plus, Cloud, FileSpreadsheet, LogOut, Loader2, ArrowRight, Download, Globe, FileText, Folder, ChevronDown, Sliders, Tag, Lock, Check, AlertTriangle } from 'lucide-react';
@@ -5,6 +6,7 @@ import { googleSheetService } from '../services/googleSheetService';
 import { useLanguage } from '../contexts/LanguageContext';
 import { dbService } from '../services/db';
 import { exportService } from '../services/exportService';
+import { hashPin } from '../utils/security';
 
 interface SettingsProps {
   user: UserProfile;
@@ -23,7 +25,6 @@ type ExportPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
 type SettingsSection = 'google' | 'preferences' | 'categories' | 'security' | null;
 
 // --- EXTRACTED COMPONENT TO PREVENT RE-RENDERS ---
-// This component must be defined OUTSIDE the main Settings component
 const AccordionItem = ({ title, icon: Icon, subtext, isOpen, onToggle, children }: any) => {
   return (
     <div className={`bg-white dark:bg-[#1C1C1E] rounded-[1.25rem] overflow-hidden transition-all duration-300 border border-gray-100 dark:border-white/5 ${isOpen ? 'shadow-lg ring-1 ring-black/5 dark:ring-white/10' : 'shadow-sm'}`}>
@@ -126,19 +127,27 @@ const Settings: React.FC<SettingsProps> = ({
     setIsConfirmOpen(true);
   };
 
-  const verifyAndSavePin = () => {
-    if (oldPinInput !== user.pin) {
+  const verifyAndSavePin = async () => {
+    // Security Fix: Hash input to compare with stored hash
+    const hashedOld = await hashPin(oldPinInput);
+    if (hashedOld !== user.pin && oldPinInput !== user.pin) { // Check hash OR fallback to plain text if migration failed
       addToast('Wrong Old PIN', 'error');
       return;
     }
-    updateUser({ pin: newPin });
+    
+    // Security Fix: Hash new PIN before saving
+    const hashedNew = await hashPin(newPin);
+    updateUser({ pin: hashedNew });
     setNewPin('');
     setIsConfirmOpen(false);
     addToast('PIN Updated', 'success');
   };
 
   const handleResetData = async () => {
-     if (resetPinInput !== user.pin) {
+     // Security Fix: Hash input to compare
+     const hashedInput = await hashPin(resetPinInput);
+     
+     if (hashedInput !== user.pin && resetPinInput !== user.pin) {
         addToast('PIN Salah!', 'error');
         return;
      }

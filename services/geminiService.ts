@@ -2,13 +2,25 @@
 import { GoogleGenAI } from "@google/genai";
 import { Transaction } from "../types";
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
+    if (file.size > MAX_FILE_SIZE) {
+      reject(new Error("Ukuran file terlalu besar (Maks 5MB)"));
+      return;
+    }
+    
+    // Strict MIME type check
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      reject(new Error("Format file tidak didukung. Gunakan JPG, PNG, atau PDF."));
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
-      // Remove data:image/jpeg;base64, prefix if present
-      // Works for PDF data URLs too (data:application/pdf;base64,...)
       const base64 = result.includes(',') ? result.split(',')[1] : result;
       resolve(base64);
     };
@@ -57,7 +69,7 @@ export const getFinancialAdvice = async (transactions: Transaction[], userName: 
 
     return response.text || "Maaf, saya tidak bisa memberikan saran saat ini.";
   } catch (error) {
-    console.error("Gemini API Error:", error);
+    console.error("Gemini API Error (Advice)");
     return "Terjadi kesalahan saat menghubungi AI Advisor.";
   }
 };
@@ -127,7 +139,7 @@ export const scanReceipt = async (file: File): Promise<any> => {
     
     return JSON.parse(cleanText);
   } catch (error) {
-    console.error("Gemini Scan Error:", error);
+    console.error("Gemini Scan Error (Processing)");
     throw error;
   }
 };

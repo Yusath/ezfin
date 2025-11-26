@@ -1,7 +1,9 @@
+
 import { Transaction, UserProfile } from "../types";
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { escapeHtml } from '../utils/security';
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
@@ -189,6 +191,10 @@ export const exportService = {
     const totalExpense = expenses.reduce((s, t) => s + t.totalAmount, 0);
     const profitLoss = totalIncome - totalExpense;
 
+    // SECURITY FIX: Sanitize all user input to prevent HTML injection in the DOCX content
+    const safeUser = escapeHtml(user.name);
+    const safePeriod = escapeHtml(periodLabel);
+
     const generateTable = (data: Transaction[], color: string) => {
         if (data.length === 0) return '<p><i>Tidak ada data.</i></p>';
         return `
@@ -205,8 +211,8 @@ export const exportService = {
             ${data.map(tx => `
               <tr>
                 <td>${formatDate(tx.date)}</td>
-                <td>${tx.storeName} <br/><small>${tx.items.map(i => i.name).join(', ')}</small></td>
-                <td>${tx.category}</td>
+                <td>${escapeHtml(tx.storeName)} <br/><small>${escapeHtml(tx.items.map(i => i.name).join(', '))}</small></td>
+                <td>${escapeHtml(tx.category)}</td>
                 <td class="amount">${formatCurrency(tx.totalAmount)}</td>
               </tr>
             `).join('')}
@@ -234,8 +240,8 @@ export const exportService = {
       <body>
         <div class="header">
           <h1>Laporan Keuangan EZFin</h1>
-          <p><strong>User:</strong> ${user.name}</p>
-          <p><strong>Periode:</strong> ${periodLabel}</p>
+          <p><strong>User:</strong> ${safeUser}</p>
+          <p><strong>Periode:</strong> ${safePeriod}</p>
         </div>
 
         <h3>1. Pemasukan (Income)</h3>

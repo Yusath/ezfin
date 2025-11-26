@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { Lock } from 'lucide-react';
+import { hashPin } from '../utils/security';
 
 interface PinScreenProps {
   correctPin: string;
@@ -10,6 +11,7 @@ const PinScreen: React.FC<PinScreenProps> = ({ correctPin, onSuccess }) => {
   const [input, setInput] = useState('');
   const [isError, setIsError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [isChecking, setIsChecking] = useState(false);
 
   useEffect(() => {
     // Focus automatically on mount with a slight delay to ensure UI is ready
@@ -19,7 +21,7 @@ const PinScreen: React.FC<PinScreenProps> = ({ correctPin, onSuccess }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     
     // Ensure only numbers are entered
@@ -28,12 +30,21 @@ const PinScreen: React.FC<PinScreenProps> = ({ correctPin, onSuccess }) => {
     setInput(val);
 
     if (val.length === 6) {
-      if (val === correctPin) {
+      setIsChecking(true);
+      // Security Fix: Hash input before comparing to stored PIN
+      // This prevents plain text comparison if the stored PIN is hashed (which it should be)
+      const hashedInput = await hashPin(val);
+      
+      // Fallback: If stored PIN length < 64, it's old plaintext (handled by App.tsx migration usually, but safety check here)
+      const isValid = hashedInput === correctPin || val === correctPin;
+
+      if (isValid) {
         // Small delay for visual feedback before unmounting
         setTimeout(() => {
           onSuccess();
         }, 100);
       } else {
+        setIsChecking(false);
         setIsError(true);
         if (navigator.vibrate) navigator.vibrate(200);
         setTimeout(() => {
@@ -55,10 +66,14 @@ const PinScreen: React.FC<PinScreenProps> = ({ correctPin, onSuccess }) => {
       onClick={handleContainerClick}
     >
       <div className="flex flex-col items-center mb-10 transition-all duration-500">
-        <div className="bg-white/20 p-5 rounded-full mb-6 backdrop-blur-xl shadow-lg border border-white/10">
-          <Lock size={40} className="text-white drop-shadow-md" />
+        <div className="bg-white/20 p-5 rounded-[2rem] mb-6 backdrop-blur-xl shadow-lg border border-white/10">
+          <img 
+            src="https://i.ibb.co.com/KcRpsp15/Untitled-design.png" 
+            alt="Logo" 
+            className="w-20 h-20 object-cover rounded-2xl drop-shadow-md" 
+          />
         </div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">EZFin Security</h1>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">EZFin AutoMate</h1>
         <p className="text-white/70 text-base font-medium">Masukkan 6-digit PIN Anda</p>
       </div>
 
@@ -74,6 +89,7 @@ const PinScreen: React.FC<PinScreenProps> = ({ correctPin, onSuccess }) => {
         maxLength={6}
         value={input}
         onChange={handleChange}
+        disabled={isChecking}
         className="absolute inset-0 w-full h-full opacity-0 cursor-default"
         autoFocus
         autoComplete="off"

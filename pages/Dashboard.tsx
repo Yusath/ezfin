@@ -214,6 +214,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
 
         <Link 
           to="/settings"
+          aria-label="Settings"
           className="w-9 h-9 flex items-center justify-center rounded-full bg-white dark:bg-white/10 shadow-sm text-gray-600 dark:text-gray-300 ios-touch-target"
         >
            <SettingsIcon size={18} />
@@ -435,7 +436,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, transactions, onUpdateUser 
           <div className="bg-card-light dark:bg-card-dark w-full max-w-md rounded-t-[2rem] sm:rounded-[2rem] p-6 shadow-2xl animate-ios-slide-up max-h-[90vh] overflow-y-auto page-slide-up">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">Account & Profile</h3>
-              <button onClick={() => setIsProfileModalOpen(false)} className="p-2 bg-gray-100 dark:bg-white/10 rounded-full text-gray-500 hover:bg-gray-200 ios-touch-target">
+              <button onClick={() => setIsProfileModalOpen(false)} aria-label="Close profile" className="p-2 bg-gray-100 dark:bg-white/10 rounded-full text-gray-500 hover:bg-gray-200 ios-touch-target">
                 <X size={18} />
               </button>
             </div>

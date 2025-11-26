@@ -183,6 +183,7 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions, onDelete }) => {
                                       setItemToDelete(tx.id);
                                       setIsConfirmOpen(true);
                                   }}
+                                  aria-label="Delete transaction"
                                   className="w-8 h-8 flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20 text-red-400 hover:text-red-600 transition-colors ios-touch-target"
                               >
                                   <Trash2 size={14} />

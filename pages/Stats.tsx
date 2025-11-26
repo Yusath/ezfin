@@ -128,7 +128,7 @@ const Stats: React.FC<StatsProps> = ({ transactions, user }) => {
                 </div>
                 <h3 className="font-bold text-base">FinBot Advisor</h3>
               </div>
-              <button onClick={() => setIsAdvisorOpen(false)} className="hover:bg-white/20 p-2 rounded-full ios-touch-target transition-colors">
+              <button onClick={() => setIsAdvisorOpen(false)} aria-label="Close advisor" className="hover:bg-white/20 p-2 rounded-full ios-touch-target transition-colors">
                 <X size={18} />
               </button>
             </div>

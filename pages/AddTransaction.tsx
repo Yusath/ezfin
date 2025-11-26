@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Category, Transaction, TransactionItem } from '../types';
 import { Camera, Plus, Trash2, Sparkles, ChevronLeft, Upload, ScanLine, Image as ImageIcon, ChevronDown, Check, X, Grid } from 'lucide-react';
@@ -376,7 +375,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
 
                   {items.map((item, idx) => (
                     <div key={item.id} className="bg-gray-50 dark:bg-white/5 p-4 rounded-2xl relative animate-slide-in-right" style={{animationDelay: `${idx * 0.05}s`}}>
-                       <button onClick={() => removeItem(item.id)} className="absolute top-3 right-3 text-red-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-all ios-touch-target">
+                       <button onClick={() => removeItem(item.id)} aria-label="Hapus item" className="absolute top-3 right-3 text-red-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-all ios-touch-target">
                           <Trash2 size={16} />
                        </button>
                        
@@ -521,7 +520,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
                     <Grid size={18} />
                     Pilih Kategori
                  </h3>
-                 <button onClick={() => setShowCategoryPicker(false)} className="bg-gray-100 dark:bg-white/10 p-2 rounded-full ios-touch-target">
+                 <button onClick={() => setShowCategoryPicker(false)} aria-label="Tutup" className="bg-gray-100 dark:bg-white/10 p-2 rounded-full ios-touch-target">
                     <X size={16} className="text-gray-500 dark:text-gray-300" />
                  </button>
               </div>

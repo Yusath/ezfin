@@ -40,7 +40,8 @@ const Navbar: React.FC = () => {
         {/* Center Button Container (Docked Style) */}
         <div className="relative w-14 -top-5 flex justify-center z-10 shrink-0">
            <Link 
-             to="/add" 
+             to="/add"
+             aria-label="Add Transaction"
              className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-tr from-primary to-blue-500 text-white shadow-lg shadow-blue-500/40 border-4 border-[#F2F2F7] dark:border-[#000000] transform transition-all active:scale-90 hover:-translate-y-1"
            >
               <Plus size={24} strokeWidth={3} />

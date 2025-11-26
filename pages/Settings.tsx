@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Category, Transaction } from '../types';
 import { Moon, Shield, Trash2, Plus, Cloud, FileSpreadsheet, LogOut, Loader2, ArrowRight, Download, Globe, FileText, Folder, ChevronDown, Sliders, Tag, Lock, Check, AlertTriangle } from 'lucide-react';
@@ -425,7 +424,7 @@ const Settings: React.FC<SettingsProps> = ({
                           </div>
                         </div>
                       </div>
-                      <button onClick={handleDisconnectGoogle} className="p-2.5 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl hover:bg-red-100 transition-colors ios-touch-target">
+                      <button onClick={handleDisconnectGoogle} aria-label="Disconnect Google" className="p-2.5 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl hover:bg-red-100 transition-colors ios-touch-target">
                         <LogOut size={16} />
                       </button>
                   </div>
@@ -497,7 +496,7 @@ const Settings: React.FC<SettingsProps> = ({
                       </div>
                       <span className="font-bold text-xs text-gray-900 dark:text-white">{t('set.dark')}</span>
                     </div>
-                    <button onClick={toggleTheme} className={`w-12 h-7 rounded-full transition-colors duration-300 relative ios-touch-target ${darkMode ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                    <button onClick={toggleTheme} aria-label="Toggle Theme" className={`w-12 h-7 rounded-full transition-colors duration-300 relative ios-touch-target ${darkMode ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
                       <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ${darkMode ? 'translate-x-5' : ''}`}></div>
                     </button>
                 </div>
@@ -524,7 +523,7 @@ const Settings: React.FC<SettingsProps> = ({
                         <span className="text-lg bg-white dark:bg-black/40 w-8 h-8 flex items-center justify-center rounded-xl shadow-sm border border-gray-100 dark:border-white/10">{cat.icon}</span>
                         <span className="font-bold text-xs text-gray-700 dark:text-gray-200">{cat.name}</span>
                     </div>
-                    <button onClick={() => onDeleteCategory(cat.id)} className="text-gray-300 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all ios-touch-target"><Trash2 size={16}/></button>
+                    <button onClick={() => onDeleteCategory(cat.id)} aria-label="Delete category" className="text-gray-300 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all ios-touch-target"><Trash2 size={16}/></button>
                   </div>
                 ))}
               </div>
@@ -532,7 +531,7 @@ const Settings: React.FC<SettingsProps> = ({
               <div className="mt-4 flex gap-2 pt-4 border-t border-gray-100 dark:border-gray-800">
                 <input value={newCatIcon} onChange={e => setNewCatIcon(e.target.value)} className="w-10 h-10 text-center bg-gray-50 dark:bg-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary font-bold text-lg border border-gray-100 dark:border-white/10" />
                 <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="New Category..." className="flex-1 px-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary font-medium dark:text-white border border-gray-100 dark:border-white/10" />
-                <button onClick={handleAddCategoryClick} className="w-10 h-10 bg-black dark:bg-white text-white dark:text-black rounded-xl flex items-center justify-center ios-touch-target shadow-lg"><Plus size={20}/></button>
+                <button onClick={handleAddCategoryClick} aria-label="Add category" className="w-10 h-10 bg-black dark:bg-white text-white dark:text-black rounded-xl flex items-center justify-center ios-touch-target shadow-lg"><Plus size={20}/></button>
               </div>
           </AccordionItem>
 
@@ -716,7 +715,7 @@ const Settings: React.FC<SettingsProps> = ({
                       {selectedFolder && (
                         <div className="absolute right-2 bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1">
                            {selectedFolder.name} 
-                           <button onClick={() => {setSelectedFolder(null); setFolderQuery('');}}><Trash2 size={10}/></button>
+                           <button onClick={() => {setSelectedFolder(null); setFolderQuery('');}} aria-label="Clear folder"><Trash2 size={10}/></button>
                         </div>
                       )}
                    </div>

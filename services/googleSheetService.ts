@@ -24,18 +24,19 @@ let tokenClient: any;
 let accessToken: string | null = null;
 let isInitialized = false;
 
+// Helper to load scripts nicely
 const loadScript = (src: string): Promise<void> => {
   return new Promise((resolve, reject) => {
     if (document.querySelector(`script[src="${src}"]`)) {
-       resolve(); 
-       return;
+      resolve();
+      return;
     }
     const script = document.createElement('script');
     script.src = src;
     script.async = true;
     script.defer = true;
     script.onload = () => resolve();
-    script.onerror = (e) => reject(e);
+    script.onerror = (e) => reject(new Error(`Failed to load script: ${src}`));
     document.body.appendChild(script);
   });
 };
@@ -75,73 +76,65 @@ export const googleSheetService = {
     }
 
     if (!CLIENT_ID) {
+      console.warn("Google Client ID is missing.");
       onInitComplete(false);
       return;
     }
 
     try {
+      // 1. Load Scripts in parallel
       await Promise.all([
         loadScript("https://apis.google.com/js/api.js"),
         loadScript("https://accounts.google.com/gsi/client")
       ]);
 
-      await new Promise<void>((resolve) => {
-        if (window.gapi) {
-          window.gapi.load('client', resolve);
-        } else {
-          const interval = setInterval(() => {
-             if (window.gapi) {
-               clearInterval(interval);
-               window.gapi.load('client', resolve);
-             }
-          }, 100);
-        }
+      // 2. Initialize GAPI
+      await new Promise<void>((resolve, reject) => {
+        if (!window.gapi) return reject(new Error("GAPI not loaded"));
+        window.gapi.load('client', {
+          callback: resolve,
+          onerror: reject,
+          timeout: 5000,
+          ontimeout: reject
+        });
       });
 
-      // Initialize GAPI Client
-      try {
-        await window.gapi.client.init({
-            apiKey: API_KEY,
-            discoveryDocs: DISCOVERY_DOCS,
-        });
-      } catch (gapiError) {
-        console.warn("GAPI init warning:", gapiError);
-      }
+      // 3. Initialize GAPI Client (Sheets/Drive)
+      await window.gapi.client.init({
+        apiKey: API_KEY,
+        discoveryDocs: DISCOVERY_DOCS,
+      });
 
-      if (!window.google) {
-         await new Promise<void>(resolve => {
-            const interval = setInterval(() => {
-                if (window.google) {
-                    clearInterval(interval);
-                    resolve();
-                }
-            }, 100);
-         });
-      }
-
+      // 4. Initialize GIS (Google Identity Services)
+      if (!window.google) throw new Error("Google Identity Services not loaded");
+      
       tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
         callback: (resp: any) => {
           if (resp.error !== undefined) {
-            throw (resp);
+            console.error("Token Client Error:", resp);
+            return;
           }
-          // LOGIN SUCCESS: Save token to variable and LocalStorage
+          // LOGIN SUCCESS: Save token
           accessToken = resp.access_token;
           localStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
           
+          // Ensure GAPI uses this token immediately
           if (window.gapi && window.gapi.client) {
             window.gapi.client.setToken(resp);
           }
         },
       });
 
-      // --- INITIAL CHECK: AUTO RESTORE SESSION ---
+      // 5. AUTO RESTORE SESSION from LocalStorage
       const savedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
       if (savedToken) {
           console.log("Restoring Google Session from LocalStorage...");
           accessToken = savedToken;
-          // IMPORTANT: Restore token to GAPI client immediately so subsequent calls work
+          
+          // IMPORTANT: Restore token to GAPI client immediately
+          // We construct the token object manually as GAPI expects
           if (window.gapi && window.gapi.client) {
              window.gapi.client.setToken({ access_token: savedToken });
           }
@@ -163,12 +156,14 @@ export const googleSheetService = {
       const promptSignIn = () => {
          if (!tokenClient) return reject("Google Token Client not ready");
          
-         // Override callback to capture response
+         // Override callback to capture response specifically for this request
+         // Note: We also keep the generic callback in initTokenClient as backup
+         const originalCallback = tokenClient.callback;
+         
          tokenClient.callback = (resp: any) => {
             if (resp.error) {
                 reject(resp);
             } else {
-                // MODIFY LOGIN: Save to LocalStorage
                 accessToken = resp.access_token;
                 localStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
 
@@ -177,6 +172,8 @@ export const googleSheetService = {
                 }
                 resolve(resp.access_token);
             }
+            // Restore original callback if needed (optional since we re-init often)
+            // tokenClient.callback = originalCallback; 
          };
          
          tokenClient.requestAccessToken({prompt: 'consent'});
@@ -203,7 +200,6 @@ export const googleSheetService = {
       }
     }
     window.gapi?.client?.setToken(null);
-    // MODIFY LOGOUT: Remove from LocalStorage
     localStorage.removeItem(TOKEN_STORAGE_KEY); 
     accessToken = null;
   },
@@ -221,7 +217,7 @@ export const googleSheetService = {
         picture: data.picture
       };
     } catch (error) {
-      console.error("Failed to fetch user info");
+      console.error("Failed to fetch user info", error);
       throw error;
     }
   },

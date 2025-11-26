@@ -1,3 +1,4 @@
+
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -16,8 +17,8 @@ export default defineConfig(({ mode }) => {
       // Expose Keys to the client-side code safely
       'process.env.API_KEY': JSON.stringify(env.API_KEY),
       'process.env.GOOGLE_CLIENT_ID': JSON.stringify(env.GOOGLE_CLIENT_ID),
-      // Polyfill process.env to avoid crashes in some libs
-      'process.env': {}
+      // Polyfill process.env to avoid crashes in some libs that expect it
+      'process.env': JSON.stringify(env)
     }
   };
 });

@@ -108,23 +108,30 @@ function App() {
              console.log("Google Services Initialized");
              
              // PERSISTENT LOGIN CHECK
-             // Check if initClient successfully restored a token from localStorage
              if (googleSheetService.hasValidSession) {
                 const token = googleSheetService.getToken();
                 if (token) {
                    try {
                      console.log("Restoring User Session info...");
                      const userInfo = await googleSheetService.getUserInfo(token);
-                     setUser(prev => ({
-                       ...prev,
-                       googleEmail: userInfo.email,
-                       googlePhotoUrl: userInfo.picture
-                     }));
+                     
+                     // Update State AND Persist to DB immediately
+                     // This ensures next reload has the data even if offline
+                     setUser(prev => {
+                       const updated = {
+                         ...prev,
+                         googleEmail: userInfo.email,
+                         googlePhotoUrl: userInfo.picture
+                       };
+                       dbService.saveUser(updated).catch(console.error);
+                       return updated;
+                     });
+                     
                      console.log("Session restored: User logged in.");
                    } catch (e) {
-                     console.warn("Restored session invalid", e);
-                     // If token is stale/invalid, sign out to clear storage
-                     googleSheetService.signOut();
+                     console.warn("Restored session invalid (expired)", e);
+                     // If token is stale/invalid, sign out cleanly
+                     handleGoogleSessionError();
                    }
                 }
              }

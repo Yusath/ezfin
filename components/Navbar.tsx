@@ -11,9 +11,9 @@ const Navbar: React.FC = () => {
   const NavItem = ({ to, icon: Icon, label, active }: { to: string, icon: any, label: string, active: boolean }) => (
     <Link 
       to={to} 
-      className={`flex flex-col items-center justify-center w-full gap-1 pt-3 pb-1 transition-all duration-300 active:scale-90 ${active ? 'text-primary' : 'text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400'}`}
+      className={`flex flex-col items-center justify-center w-full gap-1 pt-2 pb-1 transition-all duration-300 active:scale-90 ${active ? 'text-primary' : 'text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400'}`}
     >
-      <Icon size={24} strokeWidth={active ? 2.5 : 2} className={active ? "drop-shadow-sm" : ""} />
+      <Icon size={22} strokeWidth={active ? 2.5 : 2} className={active ? "drop-shadow-sm" : ""} />
       <span className={`text-[10px] font-medium tracking-tight ${active ? 'font-bold' : ''}`}>{label}</span>
     </Link>
   );
@@ -28,7 +28,7 @@ const Navbar: React.FC = () => {
       {/* Content Container - Uses calc to ensure minimum padding even if safe-area is 0 */}
       <div 
         className="relative flex justify-between items-end w-full px-2 pt-2"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' }}
       >
         
         {/* Left Group */}
@@ -38,12 +38,12 @@ const Navbar: React.FC = () => {
         </div>
 
         {/* Center Button Container (Docked Style) */}
-        <div className="relative w-16 -top-6 flex justify-center z-10 shrink-0">
+        <div className="relative w-14 -top-5 flex justify-center z-10 shrink-0">
            <Link 
              to="/add" 
-             className="flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-tr from-primary to-blue-500 text-white shadow-lg shadow-blue-500/40 border-4 border-[#F2F2F7] dark:border-[#000000] transform transition-all active:scale-90 hover:-translate-y-1"
+             className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-tr from-primary to-blue-500 text-white shadow-lg shadow-blue-500/40 border-4 border-[#F2F2F7] dark:border-[#000000] transform transition-all active:scale-90 hover:-translate-y-1"
            >
-              <Plus size={28} strokeWidth={3} />
+              <Plus size={24} strokeWidth={3} />
            </Link>
         </div>
 

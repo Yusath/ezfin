@@ -9,9 +9,10 @@ declare global {
 
 // User provided Client ID
 const DEFAULT_CLIENT_ID = "28569786950-2lnehaar8vn0cueo4gpav84umuc30kc1.apps.googleusercontent.com";
+// CHANGED: Key for session storage
 const TOKEN_STORAGE_KEY = 'ezfin_google_access_token';
 
-// Initial load from Env or LocalStorage or Default
+// Initial load from Env or LocalStorage (Config persists, Token does not)
 let CLIENT_ID = process.env.GOOGLE_CLIENT_ID || localStorage.getItem('GOOGLE_CLIENT_ID') || DEFAULT_CLIENT_ID;
 let API_KEY = process.env.GOOGLE_API_KEY || localStorage.getItem('GOOGLE_API_KEY') || "";
 
@@ -119,8 +120,8 @@ export const googleSheetService = {
             throw (resp);
           }
           accessToken = resp.access_token;
-          // Save to LocalStorage for persistence
-          localStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
+          // CHANGED: Save to SessionStorage (Clears on tab close)
+          sessionStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
           
           // CRITICAL FIX: Manually set the token for GAPI
           if (window.gapi && window.gapi.client) {
@@ -130,9 +131,10 @@ export const googleSheetService = {
       });
 
       // --- AUTO RESTORE SESSION LOGIC ---
-      const savedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+      // CHANGED: Restore from SessionStorage
+      const savedToken = sessionStorage.getItem(TOKEN_STORAGE_KEY);
       if (savedToken) {
-          console.log("Restoring Google Session from LocalStorage...");
+          console.log("Restoring Google Session from SessionStorage...");
           accessToken = savedToken;
           if (window.gapi && window.gapi.client) {
              // We construct a fake token object that GAPI expects
@@ -162,8 +164,8 @@ export const googleSheetService = {
                 reject(resp);
             } else {
                 accessToken = resp.access_token;
-                // Save to LocalStorage
-                localStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
+                // CHANGED: Save to SessionStorage
+                sessionStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
 
                 // CRITICAL FIX: Bind the token to GAPI client immediately
                 if (window.gapi && window.gapi.client) {
@@ -194,7 +196,8 @@ export const googleSheetService = {
       window.google?.accounts?.oauth2?.revoke(token.access_token, () => {});
     }
     window.gapi?.client?.setToken(null); // Clear GAPI token
-    localStorage.removeItem(TOKEN_STORAGE_KEY); // Clear LocalStorage
+    // CHANGED: Clear from SessionStorage
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY); 
     accessToken = null;
   },
 
@@ -348,6 +351,50 @@ export const googleSheetService = {
       throw error;
     }
   },
+  
+  updateTransaction: async (spreadsheetId: string, tx: Transaction) => {
+    if (!accessToken && window.gapi?.client?.getToken() === null) return;
+    
+    try {
+      // 1. Find Row Index
+      const response = await window.gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: spreadsheetId,
+        range: 'Sheet1!A2:A',
+      });
+      
+      const rows = response.result.values;
+      if (!rows) return;
+      
+      const rowIndex = rows.findIndex((r: any[]) => r[0] === tx.id);
+      if (rowIndex === -1) return; // Not found
+      
+      // Sheet Row Index = rowIndex + 2 (1 for header, 1 for 0-based index vs 1-based API)
+      const sheetRow = rowIndex + 2;
+      
+      const itemDetails = tx.items.map(i => `${i.qty}x ${i.name} (@${i.price})`).join(", ");
+      const rowData = [
+        tx.id,
+        tx.date, 
+        tx.storeName,
+        tx.category,
+        tx.type,
+        tx.totalAmount,
+        itemDetails
+      ];
+
+      await window.gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `Sheet1!A${sheetRow}:G${sheetRow}`,
+        valueInputOption: 'USER_ENTERED',
+        resource: { values: [rowData] }
+      });
+      
+    } catch (error: any) {
+       console.error("Update failed", error);
+       if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
+       throw error;
+    }
+  },
 
   bulkAppendTransactions: async (spreadsheetId: string, transactions: Transaction[]) => {
     if (!accessToken && window.gapi?.client?.getToken() === null) return;
@@ -378,6 +425,22 @@ export const googleSheetService = {
       console.error("Error bulk appending", error);
       if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
       throw error;
+    }
+  },
+  
+  clearAllData: async (spreadsheetId: string) => {
+    if (!accessToken && window.gapi?.client?.getToken() === null) return;
+    
+    try {
+        // Clear everything from A2 (keeping header)
+        await window.gapi.client.sheets.spreadsheets.values.clear({
+            spreadsheetId,
+            range: 'Sheet1!A2:Z10000', 
+        });
+    } catch (error: any) {
+        console.error("Clear failed", error);
+        if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
+        throw error;
     }
   },
 
@@ -452,6 +515,66 @@ export const googleSheetService = {
 
     } catch (error: any) {
       console.error("Fetch transactions failed", error);
+      if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
+      throw error;
+    }
+  },
+  
+  deleteTransactions: async (spreadsheetId: string, txIds: string[]) => {
+    if (!accessToken && window.gapi?.client?.getToken() === null) return;
+    if (txIds.length === 0) return;
+
+    try {
+      // 1. Fetch all data to find the Row Indices (expensive but safe)
+      const response = await window.gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: spreadsheetId,
+        range: 'Sheet1!A2:A', // Fetch only ID column
+      });
+
+      const rows = response.result.values;
+      if (!rows || rows.length === 0) return;
+
+      const idsToDelete = new Set(txIds);
+      const rowIndicesToDelete: number[] = [];
+
+      // Map Sheet rows to IDs
+      rows.forEach((row: any[], index: number) => {
+         const id = row[0];
+         if (idsToDelete.has(id)) {
+           // Sheet row index logic:
+           // Data starts at A2. 
+           // API result array index 0 corresponds to A2 (Row 2).
+           // Google Sheets API GridRange is 0-based index. 
+           // Row 1 (Header) is index 0. Row 2 is index 1.
+           // So, Array index 0 + 1 (header offset) = Sheet Row Index 1.
+           rowIndicesToDelete.push(index + 1);
+         }
+      });
+
+      if (rowIndicesToDelete.length === 0) return;
+
+      // 2. Sort indices descending to avoid shifting issues when deleting
+      rowIndicesToDelete.sort((a, b) => b - a);
+
+      // 3. Construct Batch Update Request
+      const requests = rowIndicesToDelete.map(rowIndex => ({
+        deleteDimension: {
+          range: {
+            sheetId: 0, // Assuming Sheet1 is the first sheet
+            dimension: "ROWS",
+            startIndex: rowIndex,
+            endIndex: rowIndex + 1
+          }
+        }
+      }));
+
+      await window.gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        resource: { requests }
+      });
+
+    } catch (error: any) {
+      console.error("Error deleting transactions", error);
       if (error?.result?.error?.code === 401) throw new Error("UNAUTHENTICATED");
       throw error;
     }

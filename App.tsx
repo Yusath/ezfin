@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { Transaction, UserProfile, ToastMessage, Category } from './types';
 import { DEFAULT_USER_PROFILE } from './constants';
 import { dbService } from './services/db';
@@ -15,10 +15,30 @@ import HistoryPage from './pages/History';
 import { googleSheetService } from './services/googleSheetService';
 import { LanguageProvider } from './contexts/LanguageContext';
 
+const EditTransactionWrapper = ({ transactions, categories, onSave, addToast }: any) => {
+  const { id } = useParams();
+  const tx = transactions.find((t: any) => t.id === id);
+  if (!tx) return <Navigate to="/" />;
+  return <AddTransaction categories={categories} onSave={onSave} addToast={addToast} initialData={tx} />;
+};
+
 function App() {
+  // Banking App Style Security Logic
+  const INACTIVITY_LIMIT_MS = 30 * 60 * 1000; // 30 Minutes
+
   // -- State --
   const [isAppLoading, setIsAppLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // SESSION SECURITY: Idle PIN Lock Logic
+  // Default to Locked on load until verified or timed out
+  const [isLocked, setIsLocked] = useState(() => {
+    const lastActive = localStorage.getItem('ezfin_last_active');
+    if (!lastActive) return true; // First load or cleared storage -> Locked
+    
+    // Check if session expired
+    const elapsed = Date.now() - parseInt(lastActive, 10);
+    return elapsed > INACTIVITY_LIMIT_MS;
+  });
   
   // Default to Dark Mode (true) unless 'light' is explicitly saved
   const [darkMode, setDarkMode] = useState(() => {
@@ -33,7 +53,29 @@ function App() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
 
-  // -- Initialization Effect --
+  // -- Activity Monitor Effect (Banking Style) --
+  useEffect(() => {
+    const updateActivity = () => {
+      // Refresh the timestamp on interaction
+      localStorage.setItem('ezfin_last_active', Date.now().toString());
+    };
+
+    // Attach listeners to window to catch general activity
+    // This keeps the session alive as long as the user is interacting
+    window.addEventListener('mousedown', updateActivity);
+    window.addEventListener('keydown', updateActivity);
+    window.addEventListener('touchstart', updateActivity);
+    window.addEventListener('scroll', updateActivity);
+
+    return () => {
+      window.removeEventListener('mousedown', updateActivity);
+      window.removeEventListener('keydown', updateActivity);
+      window.removeEventListener('touchstart', updateActivity);
+      window.removeEventListener('scroll', updateActivity);
+    };
+  }, []);
+
+  // -- Initialization Effect (Data Loading) --
   useEffect(() => {
     const initData = async () => {
       try {
@@ -44,14 +86,10 @@ function App() {
         setCategories(loadedCats);
         setTransactions(loadedTxs);
         
-        // Theme initialization is handled by useState lazy init
-
-        // Init Google Service with Auto Restore
+        // Init Google Service with Auto Restore from SESSION storage
         googleSheetService.initClient((success) => {
           if (success) {
-             console.log("Google Services Initialized & Session Restored (if available)");
-             // If we already have a session, we can optionally trigger a background check here, 
-             // but strictly speaking, we wait for isAuthenticated to start big syncs.
+             console.log("Google Services Initialized");
           }
         });
 
@@ -66,15 +104,20 @@ function App() {
     initData();
   }, []);
 
-  // -- Automated Cloud Sync Effect on Login --
+  // -- Secured Cloud Sync Effect --
   useEffect(() => {
-    if (isAuthenticated && user.googleSheetId) {
-      // Small delay to ensure Google Token restoration is complete if it raced with PIN entry
-      setTimeout(() => {
-        performFullCloudSync(user.googleSheetId!);
-      }, 1000);
+    // Only trigger auto-sync if:
+    // 1. App data is loaded
+    // 2. Security Lock is OFF (User entered PIN)
+    // 3. User has a Google Sheet ID configured
+    if (!isAppLoading && !isLocked && user.googleSheetId) {
+       console.log("Secure Session Active: Triggering Auto Sync...");
+       // Short delay to ensure network/client readiness
+       setTimeout(() => {
+         performFullCloudSync(user.googleSheetId!);
+       }, 500);
     }
-  }, [isAuthenticated, user.googleSheetId]);
+  }, [isAppLoading, isLocked, user.googleSheetId]);
 
   // -- Theme Effect --
   useEffect(() => {
@@ -88,6 +131,12 @@ function App() {
   }, [darkMode]);
 
   // -- Handlers --
+  const handleUnlock = () => {
+    // Reset timer immediately upon unlock
+    localStorage.setItem('ezfin_last_active', Date.now().toString());
+    setIsLocked(false);
+  };
+
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const id = Math.random().toString(36).substring(7);
     setToasts((prev) => [...prev, { id, message, type }]);
@@ -103,9 +152,8 @@ function App() {
       await dbService.addTransaction(newTx);
       setTransactions((prev) => [newTx, ...prev]);
       
-      // 2. Sync to Cloud if Configured
-      if (user.googleSheetId) {
-        // We attempt to sync without blocking UI
+      // 2. Sync to Cloud if Configured AND Unlocked
+      if (!isLocked && user.googleSheetId) {
         googleSheetService.appendTransaction(user.googleSheetId, newTx)
           .then(() => addToast('Transaction saved & synced to Drive!', 'success'))
           .catch((e) => {
@@ -126,39 +174,82 @@ function App() {
     }
   };
 
+  const handleEditTransaction = async (updatedTx: Transaction) => {
+    try {
+      await dbService.addTransaction(updatedTx); // IndexedDB put = upsert
+      setTransactions((prev) => prev.map(t => t.id === updatedTx.id ? updatedTx : t));
+      
+      if (!isLocked && user.googleSheetId) {
+        googleSheetService.updateTransaction(user.googleSheetId, updatedTx)
+          .then(() => addToast('Transaction updated & synced!', 'success'))
+          .catch((e) => {
+             console.error("Sync Edit Error", e);
+             addToast('Updated locally, but Google Sync failed.', 'info');
+          });
+      } else {
+        addToast('Transaksi berhasil diperbarui!', 'success');
+      }
+
+    } catch (error) {
+      console.error(error);
+      addToast('Gagal memperbarui transaksi', 'error');
+    }
+  };
+
+  const handleDeleteTransactions = async (ids: string[]) => {
+    try {
+      // 1. Delete Local
+      await dbService.bulkDeleteTransactions(ids);
+      setTransactions(prev => prev.filter(t => !ids.includes(t.id)));
+      
+      // 2. Delete Cloud if Configured
+      if (!isLocked && user.googleSheetId) {
+         googleSheetService.deleteTransactions(user.googleSheetId, ids)
+           .then(() => addToast(`${ids.length} Transaction(s) deleted.`, 'success'))
+           .catch((e) => {
+             console.error("Delete Sync Error", e);
+             addToast('Deleted locally, but Cloud sync failed.', 'info');
+           });
+      } else {
+        addToast('Transaksi berhasil dihapus!', 'success');
+      }
+    } catch (error) {
+      console.error(error);
+      addToast('Gagal menghapus transaksi', 'error');
+    }
+  };
+
   const performFullCloudSync = async (sheetId: string) => {
     try {
-      addToast('Syncing data from Cloud...', 'info');
+      // Silent sync if just updating, toast only on explicit or significant events? 
+      // User prompt implies "Auto-fetch", so keep it user-friendly.
+      // addToast('Syncing data from Cloud...', 'info'); 
       
-      // 1. Sync Settings (Security & Preferences: PIN, Categories, Theme)
-      // fetch & save logic handled inside
+      // 1. Sync Settings
       await handleSyncSettings(sheetId);
       
-      // 2. Sync Activity (Transactions) - Bidirectional Fetch & Save
+      // 2. Sync Activity
       const cloudTxs = await googleSheetService.fetchTransactions(sheetId);
       
-      // a. Identify Local transactions that are NOT in Cloud (Offline entries)
       const cloudTxIds = new Set(cloudTxs.map(t => t.id));
       const localTxsToPush = transactions.filter(t => !cloudTxIds.has(t.id));
       
-      // b. Push missing local transactions to Cloud (Save)
       if (localTxsToPush.length > 0) {
          console.log(`Pushing ${localTxsToPush.length} missing transactions to cloud...`);
          await googleSheetService.bulkAppendTransactions(sheetId, localTxsToPush);
       }
 
-      // c. Import missing Cloud transactions to Local (Fetch)
       if (cloudTxs.length > 0) {
          await handleImportTransactions(cloudTxs);
       }
 
-      addToast('Sync Complete! Security, Preferences & Activity updated.', 'success');
+      // Only toast on completion to avoid spam
+      // addToast('Sync Complete!', 'success');
     } catch (error: any) {
       console.error("Auto Sync Failed", error);
-      if (error.message === 'UNAUTHENTICATED') {
-         googleSheetService.signOut(); // Clean up invalid local storage
+      if (error.message === 'UNAUTHENTICATED' || error.message === 'Not logged in') {
+         googleSheetService.signOut(); 
          addToast('Sesi Google berakhir. Mohon login ulang di Settings.', 'error');
-         // We don't remove googleSheetId from user profile to persist "intent" to sync
       }
     }
   };
@@ -167,7 +258,6 @@ function App() {
     try {
       await dbService.bulkAddTransactions(importedTxs);
       
-      // Merge with state, avoiding duplicates by ID
       setTransactions(prev => {
           const existingIds = new Set(prev.map(t => t.id));
           const newUnique = importedTxs.filter(t => !existingIds.has(t.id));
@@ -188,15 +278,12 @@ function App() {
         if (cloudSettings) {
             let hasChanges = false;
             
-            // 1. Sync PIN (Security)
             if (cloudSettings.pin && cloudSettings.pin !== user.pin) {
                 await handleUpdateProfile({ pin: cloudSettings.pin });
                 hasChanges = true;
             }
             
-            // 2. Sync Categories (Preferences)
             if (cloudSettings.categories && cloudSettings.categories.length > 0) {
-                 // Overwrite local categories for simplicity, assuming Cloud is truth
                  for (const cat of cloudSettings.categories) {
                      await dbService.saveCategory(cat);
                  }
@@ -204,29 +291,22 @@ function App() {
                  hasChanges = true;
             }
 
-            // 3. Sync Theme (Preferences)
             if (cloudSettings.darkMode !== undefined && cloudSettings.darkMode !== currentThemeState) {
                setDarkMode(cloudSettings.darkMode);
                hasChanges = true;
             }
 
-            if (hasChanges) {
-                console.log('Settings updated from Cloud');
-            } else {
-                console.log('Settings are already up to date');
-            }
             return true;
         } else {
-            // Cloud is empty, push local settings to initialize (Save)
             await googleSheetService.saveAppSettings(sheetId, user.pin, categories, currentThemeState);
             return false;
         }
     } catch (e: any) {
         console.error(e);
         if (e.message !== 'UNAUTHENTICATED') {
-            addToast('Settings sync failed', 'error');
+            // Suppress error toast for background syncs to avoid annoyance
         } else {
-            throw e; // Propagate auth error
+            throw e;
         }
         return false;
     }
@@ -238,7 +318,6 @@ function App() {
       await dbService.saveUser(newUser);
       setUser(newUser);
       
-      // Cloud Sync for PIN changes
       if (newUser.googleSheetId && (updatedUserPart.pin || updatedUserPart.name)) {
          googleSheetService.saveAppSettings(newUser.googleSheetId, newUser.pin, categories, darkMode).catch(console.error);
       }
@@ -248,7 +327,6 @@ function App() {
     }
   };
 
-  // Category Handlers
   const handleAddCategory = async (newCat: Category) => {
     try {
       await dbService.saveCategory(newCat);
@@ -256,7 +334,6 @@ function App() {
       setCategories(newCats);
       addToast('Kategori ditambahkan', 'success');
 
-      // Cloud Sync
       if (user.googleSheetId) {
         googleSheetService.saveAppSettings(user.googleSheetId, user.pin, newCats, darkMode).catch(console.error);
       }
@@ -272,7 +349,6 @@ function App() {
       setCategories(newCats);
       addToast('Kategori dihapus', 'success');
 
-      // Cloud Sync
       if (user.googleSheetId) {
         googleSheetService.saveAppSettings(user.googleSheetId, user.pin, newCats, darkMode).catch(console.error);
       }
@@ -284,7 +360,6 @@ function App() {
   const toggleThemeHandler = () => {
     const newMode = !darkMode;
     setDarkMode(newMode);
-    // Sync preference change
     if (user.googleSheetId) {
       googleSheetService.saveAppSettings(user.googleSheetId, user.pin, categories, newMode).catch(console.error);
     }
@@ -299,30 +374,41 @@ function App() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <PinScreen correctPin={user.pin} onSuccess={() => setIsAuthenticated(true)} />;
+  // Security Gate
+  if (isLocked) {
+    return <PinScreen correctPin={user.pin} onSuccess={handleUnlock} />;
   }
 
   return (
     <LanguageProvider>
       <Router>
-        {/* Changed h-screen to h-[100dvh] for mobile viewport fix */}
-        <div className={`flex h-[100dvh] w-full bg-[#F2F2F7] dark:bg-black text-gray-900 dark:text-gray-100 transition-colors duration-300 overflow-hidden ${darkMode ? 'dark' : ''}`}>
+        {/* 
+          LAYOUT REFACTOR:
+          - Use min-h-[100dvh] for mobile viewport support
+          - Allow body to scroll (removed overflow-hidden from root)
+          - Ensure Sticky Sidebar for desktop
+          - Ensure padding-bottom on main content to clear fixed Navbar
+        */}
+        <div className={`flex min-h-[100dvh] w-full bg-[#F2F2F7] dark:bg-black text-gray-900 dark:text-gray-100 transition-colors duration-300 ${darkMode ? 'dark' : ''}`}>
           
           <ToastContainer toasts={toasts} removeToast={removeToast} />
           
-          {/* Desktop Sidebar (Hidden on Mobile) */}
-          <div className="hidden md:flex md:flex-col z-20">
+          {/* Desktop Sidebar: Sticky to remain visible during body scroll */}
+          <div className="hidden md:flex md:flex-col z-20 sticky top-0 h-[100dvh]">
             <Sidebar />
           </div>
 
           {/* Main Content Area */}
-          <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+          <div className="flex-1 flex flex-col relative">
             
-            {/* Scrollable Page Content */}
-            <main className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth no-scrollbar">
-              {/* Increased bottom padding (pb-32) on mobile to ensure content isn't hidden behind the floating navbar */}
-              <div className="min-h-full pb-32 md:pb-8 md:p-8 max-w-[1600px] mx-auto w-full">
+            {/* Main Content - let the browser handle scrolling (removed overflow-y-auto) */}
+            <main className="flex-1 w-full">
+              {/* 
+                Mobile Padding Fix:
+                pb-32 (128px) ensures content clears the fixed bottom navbar (approx 80px) + buffer.
+                max-w limits width on large screens.
+              */}
+              <div className="pb-32 md:pb-8 md:p-8 max-w-[1600px] mx-auto w-full pt-safe">
                 <Routes>
                   <Route 
                     path="/" 
@@ -348,11 +434,25 @@ function App() {
                     } 
                   />
                   <Route 
+                    path="/edit/:id" 
+                    element={
+                      <div className="md:max-w-2xl md:mx-auto">
+                        <EditTransactionWrapper 
+                          transactions={transactions} 
+                          categories={categories} 
+                          onSave={handleEditTransaction}
+                          addToast={addToast}
+                        />
+                      </div>
+                    } 
+                  />
+                  <Route 
                     path="/history" 
                     element={
                       <div className="md:max-w-4xl md:mx-auto">
                         <HistoryPage 
                           transactions={transactions} 
+                          onDelete={handleDeleteTransactions}
                         />
                       </div>
                     } 
@@ -391,7 +491,7 @@ function App() {
               </div>
             </main>
 
-            {/* Mobile Navbar (Hidden on Desktop) */}
+            {/* Mobile Navbar: Fixed at bottom */}
             <div className="md:hidden">
               <Navbar />
             </div>

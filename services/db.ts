@@ -119,6 +119,33 @@ class EZFinDatabase {
     });
   }
 
+  async bulkDeleteTransactions(ids: string[]): Promise<void> {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(DB_STORES.TRANSACTIONS, 'readwrite');
+      const store = transaction.objectStore(DB_STORES.TRANSACTIONS);
+      
+      ids.forEach(id => {
+        store.delete(id);
+      });
+
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  async clearAllTransactions(): Promise<void> {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(DB_STORES.TRANSACTIONS, 'readwrite');
+      const store = transaction.objectStore(DB_STORES.TRANSACTIONS);
+      const request = store.clear();
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   // --- CATEGORIES ---
   async getAllCategories(): Promise<Category[]> {
     const db = await this.open();

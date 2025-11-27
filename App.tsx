@@ -42,10 +42,10 @@ function App() {
     return elapsed > INACTIVITY_LIMIT_MS;
   });
   
-  // Default to Dark Mode (true) unless 'light' is explicitly saved
+  // Default to Light Mode (false) unless 'dark' is explicitly saved
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
-    return saved !== 'light';
+    return saved === 'dark';
   });
   
   // Theme Color State

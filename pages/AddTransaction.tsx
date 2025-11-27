@@ -284,7 +284,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
   }
 
   return (
-    <div className="pt-safe min-h-screen bg-[#F2F2F7] dark:bg-black pb-32 page-slide-up">
+    <div className="pt-safe min-h-screen pb-32 page-slide-up">
       
       {/* Header */}
       <div className="px-4 py-4 md:py-8 flex items-center justify-between">

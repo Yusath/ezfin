@@ -1,9 +1,7 @@
 
-
-
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Category, Transaction } from '../types';
-import { Moon, Shield, Trash2, Plus, Cloud, FileSpreadsheet, LogOut, Loader2, ArrowRight, Download, Globe, FileText, Folder, ChevronDown, Sliders, Tag, Lock, Check, AlertTriangle, Smile, X, Grid, Palette } from 'lucide-react';
+import { Moon, Shield, Trash2, Plus, Cloud, FileSpreadsheet, LogOut, Loader2, ArrowRight, Download, Globe, FileText, Folder, ChevronDown, Sliders, Tag, Lock, Check, AlertTriangle, Smile, X, Grid, Palette, Image as ImageIcon, Upload } from 'lucide-react';
 import { googleSheetService } from '../services/googleSheetService';
 import { useLanguage } from '../contexts/LanguageContext';
 import { dbService } from '../services/db';
@@ -18,6 +16,8 @@ interface SettingsProps {
   themeColor: string;
   toggleTheme: () => void;
   setThemeColor: (color: string) => void;
+  backgroundImage?: string | null;
+  setBackgroundImage?: (url: string | null) => void;
   onAddCategory: (cat: Category) => void;
   onDeleteCategory: (id: string) => void;
   updateUser: (user: Partial<UserProfile>) => void;
@@ -80,7 +80,7 @@ const AccordionItem = ({ title, icon: Icon, subtext, isOpen, onToggle, children 
 };
 
 const Settings: React.FC<SettingsProps> = ({ 
-  user, categories, darkMode, themeColor, toggleTheme, setThemeColor, onAddCategory, onDeleteCategory, updateUser, onImportTransactions, onSyncSettings, addToast, onGoogleSessionError
+  user, categories, darkMode, themeColor, toggleTheme, setThemeColor, backgroundImage, setBackgroundImage, onAddCategory, onDeleteCategory, updateUser, onImportTransactions, onSyncSettings, addToast, onGoogleSessionError
 }) => {
   const { t, language, setLanguage } = useLanguage();
   const [openSection, setOpenSection] = useState<SettingsSection>(null);
@@ -178,6 +178,21 @@ const Settings: React.FC<SettingsProps> = ({
         console.error(e);
         addToast('Gagal mereset data.', 'error');
      }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && setBackgroundImage) {
+        if (file.size > 2 * 1024 * 1024) { // 2MB limit
+            addToast('Ukuran gambar maksimal 2MB', 'error');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setBackgroundImage(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+    }
   };
 
   const filterTransactionsByPeriod = (txs: Transaction[], period: ExportPeriod): Transaction[] => {
@@ -369,7 +384,7 @@ const Settings: React.FC<SettingsProps> = ({
   };
 
   return (
-    <div className="pt-safe min-h-screen bg-[#F2F2F7] dark:bg-black page-transition pb-28 md:pb-10">
+    <div className="pt-safe min-h-screen page-transition pb-28 md:pb-10">
       
       <div className="px-6 py-6 pb-2">
         <h1 className="text-2xl font-extrabold text-black dark:text-white tracking-tight">{t('set.title')}</h1>
@@ -534,6 +549,36 @@ const Settings: React.FC<SettingsProps> = ({
                       ))}
                     </div>
                 </div>
+
+                {setBackgroundImage && (
+                    <div className="p-2 border-t border-gray-100 dark:border-white/5 pt-4">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                                <ImageIcon size={16} />
+                            </div>
+                            <span className="font-bold text-xs text-gray-900 dark:text-white">Background Image</span>
+                        </div>
+                        
+                        <div className="flex flex-col gap-3">
+                            {backgroundImage && (
+                                <div className="relative h-32 w-full rounded-2xl overflow-hidden shadow-sm group">
+                                    <img src={backgroundImage} className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => setBackgroundImage(null)} className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md hover:bg-red-600 transition-colors">Hapus</button>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            <label className="flex items-center justify-center w-full border-2 border-dashed border-gray-200 dark:border-white/10 rounded-2xl p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                                <div className="flex flex-col items-center gap-1">
+                                    <Upload size={20} className="text-gray-400" />
+                                    <span className="text-[10px] font-bold text-gray-500">Upload Image (Blurry & 50% Opacity)</span>
+                                </div>
+                                <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                            </label>
+                        </div>
+                    </div>
+                )}
               </div>
           </AccordionItem>
 

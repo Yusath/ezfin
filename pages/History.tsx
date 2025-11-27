@@ -72,7 +72,7 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions, onDelete }) => {
   };
 
   return (
-    <div className="pt-safe min-h-screen bg-[#F2F2F7] dark:bg-black page-transition">
+    <div className="pt-safe min-h-screen page-transition">
       <div className="px-6 py-6 pb-2 flex justify-between items-center">
         <h1 className="text-2xl font-extrabold text-black dark:text-white tracking-tight">{t('hist.title')}</h1>
         <button 

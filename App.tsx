@@ -52,6 +52,20 @@ function App() {
   const [themeColor, setThemeColor] = useState(() => {
     return localStorage.getItem('theme_color') || 'blue';
   });
+
+  // Background Image State
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(() => {
+    return localStorage.getItem('ezfin_bg_image');
+  });
+
+  const handleSetBackgroundImage = (dataUrl: string | null) => {
+    if (dataUrl) {
+      localStorage.setItem('ezfin_bg_image', dataUrl);
+    } else {
+      localStorage.removeItem('ezfin_bg_image');
+    }
+    setBackgroundImage(dataUrl);
+  };
   
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   
@@ -498,18 +512,31 @@ function App() {
           - Allow body to scroll (removed overflow-hidden from root)
           - Ensure Sticky Sidebar for desktop
           - Ensure padding-bottom on main content to clear fixed Navbar
+          - Add Dynamic Background Layer for custom images
         */}
-        <div className={`flex min-h-[100dvh] w-full bg-[#F2F2F7] dark:bg-black text-gray-900 dark:text-gray-100 transition-colors duration-300 ${darkMode ? 'dark' : ''}`}>
+        <div className={`flex min-h-[100dvh] w-full text-gray-900 dark:text-gray-100 transition-colors duration-300 ${darkMode ? 'dark' : ''} ${!backgroundImage ? 'bg-[#F2F2F7] dark:bg-black' : ''}`}>
           
+          {/* Custom Background Image Layer - Blurry & 50% Opacity */}
+          {backgroundImage && (
+            <div 
+              className="fixed inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-700 ease-in-out"
+              style={{ 
+                backgroundImage: `url(${backgroundImage})`, 
+                filter: 'blur(12px)',
+                opacity: 0.5 
+              }}
+            />
+          )}
+
           <ToastContainer toasts={toasts} removeToast={removeToast} />
           
-          {/* Desktop Sidebar: Sticky to remain visible during body scroll */}
+          {/* Desktop Sidebar: Sticky to remain visible during body scroll - z-20 to be above bg */}
           <div className="hidden md:flex md:flex-col z-20 sticky top-0 h-[100dvh]">
             <Sidebar />
           </div>
 
-          {/* Main Content Area */}
-          <div className="flex-1 flex flex-col relative">
+          {/* Main Content Area - relative z-10 to sit on top of fixed background */}
+          <div className="flex-1 flex flex-col relative z-10">
             
             {/* Main Content - let the browser handle scrolling (removed overflow-y-auto) */}
             <main className="flex-1 w-full">
@@ -589,6 +616,8 @@ function App() {
                           themeColor={themeColor}
                           toggleTheme={toggleThemeHandler}
                           setThemeColor={changeThemeColorHandler}
+                          backgroundImage={backgroundImage}
+                          setBackgroundImage={handleSetBackgroundImage}
                           onAddCategory={handleAddCategory}
                           onDeleteCategory={handleDeleteCategory}
                           updateUser={handleUpdateProfile}

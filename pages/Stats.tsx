@@ -42,7 +42,7 @@ const Stats: React.FC<StatsProps> = ({ transactions, user }) => {
   };
 
   return (
-    <div className="p-6 pb-28 md:pb-10 min-h-screen space-y-6 bg-[#F2F2F7] dark:bg-black page-transition pt-safe">
+    <div className="p-6 pb-28 md:pb-10 min-h-screen space-y-6 page-transition pt-safe">
       <div className="pb-2">
         <h1 className="text-2xl font-extrabold text-black dark:text-white tracking-tight">{t('stats.title')}</h1>
       </div>

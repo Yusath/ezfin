@@ -49,17 +49,22 @@ export const getFinancialAdvice = async (transactions: Transaction[], userName: 
       .join(', ');
 
     const prompt = `
-      Bertindaklah sebagai penasihat keuangan yang ramah dan cerdas untuk mahasiswa bernama ${userName}.
+      Bertindaklah sebagai asisten keuangan pribadi untuk ${userName}.
       
-      Data Keuangan Bulan Ini:
-      - Total Pemasukan: Rp ${totalIncome.toLocaleString()}
-      - Total Pengeluaran: Rp ${totalExpense.toLocaleString()}
-      - Sisa Saldo: Rp ${(totalIncome - totalExpense).toLocaleString()}
+      Data Keuangan:
+      - Total Masuk: Rp ${totalIncome.toLocaleString()}
+      - Total Keluar: Rp ${totalExpense.toLocaleString()}
+      - Sisa: Rp ${(totalIncome - totalExpense).toLocaleString()}
+      - Pengeluaran Terbesar: ${recentExpenses}
       
-      Pengeluaran Terakhir:
-      ${recentExpenses}
+      Tugas:
+      Berikan saran atau komentar keuangan yang SANGAT RINGKAS dan PADAT.
       
-      Berikan saran singkat (maksimal 3 poin), praktis, dan memotivasi tentang bagaimana mereka bisa menghemat uang atau mengelola keuangan lebih baik. Gunakan bahasa yang santai tapi sopan ala gen-z/millennial. Gunakan Emoji.
+      Aturan Ketat:
+      1. Maksimal 2 kalimat pendek atau poin.
+      2. Langsung pada inti masalah atau solusi.
+      3. Jangan gunakan pembukaan basa-basi (seperti "Halo", "Berdasarkan data", dll).
+      4. Gunakan emoji.
     `;
 
     const response = await ai.models.generateContent({
@@ -67,7 +72,7 @@ export const getFinancialAdvice = async (transactions: Transaction[], userName: 
       contents: prompt,
     });
 
-    return response.text || "Maaf, saya tidak bisa memberikan saran saat ini.";
+    return response.text || "Hemat pangkal kaya! 🌱";
   } catch (error) {
     console.error("Gemini API Error (Advice)");
     return "Terjadi kesalahan saat menghubungi AI Advisor.";

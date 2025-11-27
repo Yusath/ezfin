@@ -28,7 +28,7 @@ interface SettingsProps {
 }
 
 type ExportPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
-type SettingsSection = 'google' | 'preferences' | 'categories' | 'security' | null;
+type SettingsSection = 'security' | null;
 
 // Curated List of Emojis for Finance App
 const EMOJI_LIST = [
@@ -79,11 +79,40 @@ const AccordionItem = ({ title, icon: Icon, subtext, isOpen, onToggle, children 
   );
 };
 
+const SettingsModal = ({ title, isOpen, onClose, children }: any) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-ios-fade-in">
+       <div 
+         className="absolute inset-0" 
+         onClick={onClose}
+       ></div>
+       <div className="bg-white dark:bg-[#1C1C1E] w-full max-w-md rounded-[2rem] p-6 shadow-2xl flex flex-col max-h-[85vh] page-slide-up relative z-10">
+          <div className="flex justify-between items-center mb-4 border-b border-gray-100 dark:border-white/5 pb-4">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">{title}</h2>
+            <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-white/10 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 ios-touch-target">
+              <X size={18} />
+            </button>
+          </div>
+          <div className="overflow-y-auto no-scrollbar pb-safe space-y-4">
+            {children}
+          </div>
+       </div>
+    </div>
+  );
+};
+
 const Settings: React.FC<SettingsProps> = ({ 
   user, categories, darkMode, themeColor, toggleTheme, setThemeColor, backgroundImage, setBackgroundImage, onAddCategory, onDeleteCategory, updateUser, onImportTransactions, onSyncSettings, addToast, onGoogleSessionError
 }) => {
   const { t, language, setLanguage } = useLanguage();
   const [openSection, setOpenSection] = useState<SettingsSection>(null);
+  
+  // Modals State
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
+  const [showPreferencesModal, setShowPreferencesModal] = useState(false);
+  const [showCategoriesModal, setShowCategoriesModal] = useState(false);
+
   const [catTypeFilter, setCatTypeFilter] = useState<'expense' | 'income'>('expense');
   const [newCatName, setNewCatName] = useState('');
   const [newCatIcon, setNewCatIcon] = useState('📦');
@@ -392,242 +421,67 @@ const Settings: React.FC<SettingsProps> = ({
 
       <div className="p-4 space-y-4 max-w-4xl mx-auto">
         
-        <button 
-           onClick={() => setShowExportModal(true)}
-           className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-[1.5rem] p-5 shadow-xl shadow-emerald-500/20 flex items-center justify-between ios-touch-target group"
-        >
-           <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl border border-white/10 group-active:scale-95 transition-transform">
-                 <Download size={22} />
-              </div>
-              <div className="text-left">
-                 <p className="font-bold text-lg tracking-tight">{t('set.export')} (PDF/Excel)</p>
-                 <p className="text-xs text-emerald-100 font-medium opacity-90">{t('set.export.desc')}</p>
-              </div>
-           </div>
-           <div className="bg-white/10 p-2 rounded-full">
-             <ArrowRight size={18} />
-           </div>
-        </button>
-
-        <div className="space-y-3">
-          
-          {/* 1. GOOGLE ACCOUNT */}
-          <AccordionItem 
-            title={t('set.google')} 
-            icon={Cloud} 
-            subtext={user.googleEmail ? 'Connected' : t('set.backup.desc')}
-            isOpen={openSection === 'google'}
-            onToggle={() => toggleSection('google')}
-          >
-              {!user.googleEmail ? (
-                <div className="flex flex-col items-center text-center space-y-4 py-2">
-                  <div className="w-14 h-14 bg-blue-50 dark:bg-white/5 rounded-full flex items-center justify-center text-primary mb-1">
-                     <Cloud size={28} />
-                  </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 max-w-xs mx-auto leading-relaxed">
-                    {t('set.backup.desc')}
-                  </p>
-                  <button 
-                    onClick={handleConnectGoogle}
-                    disabled={isGoogleLoading}
-                    className="w-full bg-blue-600 text-white py-3.5 rounded-2xl font-bold shadow-lg shadow-blue-500/30 ios-touch-target flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale hover:bg-blue-700 transition-colors text-sm"
-                  >
-                    {isGoogleLoading ? <Loader2 className="animate-spin" /> : <ArrowRight size={18} />}
-                    {t('set.signin')}
-                  </button>
+        {/* NEW GRID LAYOUT */}
+        <div className="grid grid-cols-2 gap-3 mb-2">
+            {/* Export Button */}
+            <button 
+                onClick={() => setShowExportModal(true)}
+                className="flex flex-col items-center justify-center p-4 rounded-[1.5rem] bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20 ios-touch-target aspect-[4/3] relative overflow-hidden group"
+            >
+                <div className="absolute top-0 left-0 w-full h-full bg-white/0 group-hover:bg-white/10 transition-colors"></div>
+                <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-2 border border-white/10 group-active:scale-95 transition-transform">
+                    <Download size={20} />
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between bg-gray-50 dark:bg-black/20 p-3 rounded-2xl border border-gray-100 dark:border-white/5">
-                      <div className="flex items-center gap-3">
-                        <img src={user.googlePhotoUrl || user.avatarUrl} className="w-10 h-10 rounded-full border-2 border-white shadow-sm" />
-                        <div className="overflow-hidden text-left">
-                          <p className="font-bold text-gray-900 dark:text-white text-xs truncate max-w-[150px]">{user.googleEmail}</p>
-                          <div className="flex items-center gap-1 mt-0.5">
-                             <Check size={10} className="text-green-500" />
-                             <p className="text-[10px] text-green-500 font-bold">Linked</p>
-                          </div>
-                        </div>
-                      </div>
-                      <button onClick={handleDisconnectGoogle} aria-label="Disconnect Google" className="p-2.5 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl hover:bg-red-100 transition-colors ios-touch-target">
-                        <LogOut size={16} />
-                      </button>
-                  </div>
+                <span className="font-bold text-sm leading-none">{t('set.export')}</span>
+                <span className="text-[10px] opacity-80 font-medium mt-1">PDF / Excel / Doc</span>
+            </button>
 
-                  <div>
-                    <h3 className="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase mb-2 ml-1 tracking-wider">{t('set.sheet')}</h3>
-                    {!user.googleSheetId ? (
-                        <button 
-                          onClick={handleChangeSheet}
-                          className="w-full border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex flex-col items-center justify-center text-gray-500 hover:border-primary hover:text-primary transition-all gap-1.5 bg-gray-50/50 dark:bg-white/5 ios-touch-target"
-                        >
-                          <FileSpreadsheet size={24} />
-                          <span className="font-bold text-xs">Select or Create Sheet</span>
-                        </button>
-                    ) : (
-                        <div className="space-y-2">
-                          <div className="bg-gray-50 dark:bg-black/20 rounded-2xl p-3 flex items-center justify-between border border-gray-100 dark:border-white/5">
-                            <div className="flex items-center gap-2 overflow-hidden">
-                                <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-xl flex items-center justify-center shrink-0">
-                                  <FileSpreadsheet size={16} />
-                                </div>
-                                <span className="text-xs font-bold text-gray-900 dark:text-white truncate">{user.googleSheetName}</span>
-                            </div>
-                            <button onClick={handleChangeSheet} className="text-[10px] text-primary font-bold px-2 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-lg ios-touch-target">
-                              Change
-                            </button>
-                          </div>
-                          
-                          <button 
-                            onClick={handleSyncFromCloud}
-                            disabled={isGoogleLoading}
-                            className="w-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50 ios-touch-target text-sm"
-                          >
-                            {isGoogleLoading ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
-                            {t('set.sync')}
-                          </button>
-                        </div>
-                    )}
-                  </div>
+            {/* Google Button - Reddish */}
+            <button 
+                onClick={() => setShowGoogleModal(true)}
+                className="flex flex-col items-center justify-center p-4 rounded-[1.5rem] bg-gradient-to-br from-red-500 to-pink-600 text-white shadow-lg shadow-red-500/20 ios-touch-target aspect-[4/3] relative overflow-hidden group"
+            >
+                <div className="absolute top-0 left-0 w-full h-full bg-white/0 group-hover:bg-white/10 transition-colors"></div>
+                <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-2 border border-white/10 group-active:scale-95 transition-transform">
+                    {user.googleEmail ? <Cloud size={20} /> : <LogOut size={20} className="rotate-180" />}
                 </div>
-              )}
-          </AccordionItem>
-
-          {/* 2. PREFERENCES */}
-          <AccordionItem 
-            title={t('set.pref')} 
-            icon={Sliders} 
-            subtext={`${language.toUpperCase()}, ${darkMode ? 'Dark' : 'Light'}`}
-            isOpen={openSection === 'preferences'}
-            onToggle={() => toggleSection('preferences')}
-          >
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center justify-center">
-                        <Globe size={16} />
-                      </div>
-                      <span className="font-bold text-xs text-gray-900 dark:text-white">{t('set.lang')}</span>
-                    </div>
-                    <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
-                      <button onClick={() => setLanguage('id')} className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ios-touch-target ${language === 'id' ? 'bg-white dark:bg-gray-600 shadow-sm text-primary' : 'text-gray-500'}`}>ID</button>
-                      <button onClick={() => setLanguage('en')} className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ios-touch-target ${language === 'en' ? 'bg-white dark:bg-gray-600 shadow-sm text-primary' : 'text-gray-500'}`}>EN</button>
-                    </div>
+                <span className="font-bold text-sm leading-none">{t('set.google')}</span>
+                <span className="text-[10px] opacity-80 font-medium mt-1">{user.googleEmail ? 'Connected' : 'Login & Sync'}</span>
+            </button>
+            
+            {/* Preferences */}
+            <button 
+                onClick={() => setShowPreferencesModal(true)}
+                className="flex flex-col items-center justify-center p-4 rounded-[1.5rem] bg-white dark:bg-[#1C1C1E] border border-gray-100 dark:border-white/5 shadow-sm ios-touch-target aspect-[4/3] group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+            >
+                <div className="w-10 h-10 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center mb-2 text-gray-600 dark:text-gray-300 group-active:scale-95 transition-transform">
+                    <Sliders size={20} />
                 </div>
-                
-                <div className="flex items-center justify-between p-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                        <Moon size={16} fill="currentColor" />
-                      </div>
-                      <span className="font-bold text-xs text-gray-900 dark:text-white">{t('set.dark')}</span>
-                    </div>
-                    <button onClick={toggleTheme} aria-label="Toggle Theme" className={`w-12 h-7 rounded-full transition-colors duration-300 relative ios-touch-target ${darkMode ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                      <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ${darkMode ? 'translate-x-5' : ''}`}></div>
-                    </button>
+                <span className="font-bold text-sm text-gray-900 dark:text-white leading-none">{t('set.pref')}</span>
+                <span className="text-[10px] text-gray-500 font-medium mt-1">Theme / Lang</span>
+            </button>
+
+            {/* Categories */}
+            <button 
+                onClick={() => setShowCategoriesModal(true)}
+                className="flex flex-col items-center justify-center p-4 rounded-[1.5rem] bg-white dark:bg-[#1C1C1E] border border-gray-100 dark:border-white/5 shadow-sm ios-touch-target aspect-[4/3] group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+            >
+                 <div className="w-10 h-10 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center mb-2 text-gray-600 dark:text-gray-300 group-active:scale-95 transition-transform">
+                    <Tag size={20} />
                 </div>
+                <span className="font-bold text-sm text-gray-900 dark:text-white leading-none">{t('set.cats')}</span>
+                <span className="text-[10px] text-gray-500 font-medium mt-1">Manage Items</span>
+            </button>
+        </div>
 
-                <div className="p-2 border-t border-gray-100 dark:border-white/5 pt-4">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 rounded-xl bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 flex items-center justify-center">
-                        <Palette size={16} />
-                      </div>
-                      <span className="font-bold text-xs text-gray-900 dark:text-white">Theme Accent</span>
-                    </div>
-                    <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1 px-1">
-                      {APP_THEMES.map(theme => (
-                        <button
-                          key={theme.id}
-                          onClick={() => setThemeColor(theme.id)}
-                          aria-label={`Select ${theme.name} theme`}
-                          className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 transition-all ios-touch-target ${themeColor === theme.id ? 'border-gray-900 dark:border-white scale-110 shadow-sm' : 'border-transparent hover:scale-105'}`}
-                          style={{ backgroundColor: theme.hex }}
-                        >
-                          {themeColor === theme.id && <Check size={14} className="text-white" strokeWidth={3} />}
-                        </button>
-                      ))}
-                    </div>
-                </div>
-
-                {setBackgroundImage && (
-                    <div className="p-2 border-t border-gray-100 dark:border-white/5 pt-4">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-                                <ImageIcon size={16} />
-                            </div>
-                            <span className="font-bold text-xs text-gray-900 dark:text-white">Background Image</span>
-                        </div>
-                        
-                        <div className="flex flex-col gap-3">
-                            {backgroundImage && (
-                                <div className="relative h-32 w-full rounded-2xl overflow-hidden shadow-sm group">
-                                    <img src={backgroundImage} className="w-full h-full object-cover" />
-                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => setBackgroundImage(null)} className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md hover:bg-red-600 transition-colors">Hapus</button>
-                                    </div>
-                                </div>
-                            )}
-                            
-                            <label className="flex items-center justify-center w-full border-2 border-dashed border-gray-200 dark:border-white/10 rounded-2xl p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                                <div className="flex flex-col items-center gap-1">
-                                    <Upload size={20} className="text-gray-400" />
-                                    <span className="text-[10px] font-bold text-gray-500">Upload Image (Blurry & 50% Opacity)</span>
-                                </div>
-                                <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
-                            </label>
-                        </div>
-                    </div>
-                )}
-              </div>
-          </AccordionItem>
-
-          {/* 3. CATEGORIES */}
-          <AccordionItem 
-            title={t('set.cats')} 
-            icon={Tag} 
-            subtext={`${filteredCategories.length} Categories`}
-            isOpen={openSection === 'categories'}
-            onToggle={() => toggleSection('categories')}
-          >
-              <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1 mb-4">
-                  <button onClick={() => setCatTypeFilter('expense')} className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ios-touch-target ${catTypeFilter === 'expense' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}>{t('add.expense')}</button>
-                  <button onClick={() => setCatTypeFilter('income')} className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ios-touch-target ${catTypeFilter === 'income' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}>{t('add.income')}</button>
-              </div>
-              
-              <div className="grid grid-cols-1 gap-2 max-h-56 overflow-y-auto no-scrollbar pr-1">
-                {filteredCategories.map(cat => (
-                  <div key={cat.id} className="flex justify-between items-center p-2.5 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl group transition-colors border border-transparent hover:border-gray-100 dark:hover:border-white/5">
-                    <div className="flex items-center gap-3">
-                        <span className="text-lg bg-white dark:bg-black/40 w-8 h-8 flex items-center justify-center rounded-xl shadow-sm border border-gray-100 dark:border-white/10">{cat.icon}</span>
-                        <span className="font-bold text-xs text-gray-700 dark:text-gray-200">{cat.name}</span>
-                    </div>
-                    <button onClick={() => onDeleteCategory(cat.id)} aria-label="Delete category" className="text-gray-300 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all ios-touch-target"><Trash2 size={16}/></button>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-4 flex gap-2 pt-4 border-t border-gray-100 dark:border-gray-800">
-                {/* Visual Emoji Picker Button */}
-                <button 
-                  onClick={() => setShowEmojiPicker(true)}
-                  className="w-10 h-10 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-white/10 flex items-center justify-center text-xl hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ios-touch-target"
-                >
-                  {newCatIcon}
-                </button>
-                <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="New Category..." className="flex-1 px-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary font-medium dark:text-white border border-gray-100 dark:border-white/10" />
-                <button onClick={handleAddCategoryClick} aria-label="Add category" className="w-10 h-10 bg-black dark:bg-white text-white dark:text-black rounded-xl flex items-center justify-center ios-touch-target shadow-lg"><Plus size={20}/></button>
-              </div>
-          </AccordionItem>
-
-          {/* 4. SECURITY */}
-          <AccordionItem 
+        {/* SECURITY */}
+        <AccordionItem 
             title={t('set.sec')} 
             icon={Shield} 
             subtext={t('set.pin')}
             isOpen={openSection === 'security'}
             onToggle={() => toggleSection('security')}
-          >
+        >
              <div className="flex flex-col items-center py-2 space-y-6">
                 <div className="w-full">
                   <div className="flex flex-col items-center">
@@ -669,13 +523,205 @@ const Settings: React.FC<SettingsProps> = ({
                    </p>
                 </div>
              </div>
-          </AccordionItem>
+        </AccordionItem>
 
-        </div>
       </div>
 
+      {/* MODALS */}
+      
+      {/* 1. Google Modal */}
+      <SettingsModal title={t('set.google')} isOpen={showGoogleModal} onClose={() => setShowGoogleModal(false)}>
+          {!user.googleEmail ? (
+            <div className="flex flex-col items-center text-center space-y-4 py-2">
+              <div className="w-14 h-14 bg-blue-50 dark:bg-white/5 rounded-full flex items-center justify-center text-primary mb-1">
+                  <Cloud size={28} />
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-400 max-w-xs mx-auto leading-relaxed">
+                {t('set.backup.desc')}
+              </p>
+              <button 
+                onClick={handleConnectGoogle}
+                disabled={isGoogleLoading}
+                className="w-full bg-blue-600 text-white py-3.5 rounded-2xl font-bold shadow-lg shadow-blue-500/30 ios-touch-target flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale hover:bg-blue-700 transition-colors text-sm"
+              >
+                {isGoogleLoading ? <Loader2 className="animate-spin" /> : <ArrowRight size={18} />}
+                {t('set.signin')}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between bg-gray-50 dark:bg-black/20 p-3 rounded-2xl border border-gray-100 dark:border-white/5">
+                  <div className="flex items-center gap-3">
+                    <img src={user.googlePhotoUrl || user.avatarUrl} className="w-10 h-10 rounded-full border-2 border-white shadow-sm" />
+                    <div className="overflow-hidden text-left">
+                      <p className="font-bold text-gray-900 dark:text-white text-xs truncate max-w-[150px]">{user.googleEmail}</p>
+                      <div className="flex items-center gap-1 mt-0.5">
+                          <Check size={10} className="text-green-500" />
+                          <p className="text-[10px] text-green-500 font-bold">Linked</p>
+                      </div>
+                    </div>
+                  </div>
+                  <button onClick={handleDisconnectGoogle} aria-label="Disconnect Google" className="p-2.5 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl hover:bg-red-100 transition-colors ios-touch-target">
+                    <LogOut size={16} />
+                  </button>
+              </div>
+
+              <div>
+                <h3 className="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase mb-2 ml-1 tracking-wider">{t('set.sheet')}</h3>
+                {!user.googleSheetId ? (
+                    <button 
+                      onClick={handleChangeSheet}
+                      className="w-full border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex flex-col items-center justify-center text-gray-500 hover:border-primary hover:text-primary transition-all gap-1.5 bg-gray-50/50 dark:bg-white/5 ios-touch-target"
+                    >
+                      <FileSpreadsheet size={24} />
+                      <span className="font-bold text-xs">Select or Create Sheet</span>
+                    </button>
+                ) : (
+                    <div className="space-y-2">
+                      <div className="bg-gray-50 dark:bg-black/20 rounded-2xl p-3 flex items-center justify-between border border-gray-100 dark:border-white/5">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                            <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-xl flex items-center justify-center shrink-0">
+                              <FileSpreadsheet size={16} />
+                            </div>
+                            <span className="text-xs font-bold text-gray-900 dark:text-white truncate">{user.googleSheetName}</span>
+                        </div>
+                        <button onClick={handleChangeSheet} className="text-[10px] text-primary font-bold px-2 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-lg ios-touch-target">
+                          Change
+                        </button>
+                      </div>
+                      
+                      <button 
+                        onClick={handleSyncFromCloud}
+                        disabled={isGoogleLoading}
+                        className="w-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50 ios-touch-target text-sm"
+                      >
+                        {isGoogleLoading ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+                        {t('set.sync')}
+                      </button>
+                    </div>
+                )}
+              </div>
+            </div>
+          )}
+      </SettingsModal>
+
+      {/* 2. Preferences Modal */}
+      <SettingsModal title={t('set.pref')} isOpen={showPreferencesModal} onClose={() => setShowPreferencesModal(false)}>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center justify-center">
+                    <Globe size={16} />
+                  </div>
+                  <span className="font-bold text-xs text-gray-900 dark:text-white">{t('set.lang')}</span>
+                </div>
+                <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+                  <button onClick={() => setLanguage('id')} className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ios-touch-target ${language === 'id' ? 'bg-white dark:bg-gray-600 shadow-sm text-primary' : 'text-gray-500'}`}>ID</button>
+                  <button onClick={() => setLanguage('en')} className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ios-touch-target ${language === 'en' ? 'bg-white dark:bg-gray-600 shadow-sm text-primary' : 'text-gray-500'}`}>EN</button>
+                </div>
+            </div>
+            
+            <div className="flex items-center justify-between p-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                    <Moon size={16} fill="currentColor" />
+                  </div>
+                  <span className="font-bold text-xs text-gray-900 dark:text-white">{t('set.dark')}</span>
+                </div>
+                <button onClick={toggleTheme} aria-label="Toggle Theme" className={`w-12 h-7 rounded-full transition-colors duration-300 relative ios-touch-target ${darkMode ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                  <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ${darkMode ? 'translate-x-5' : ''}`}></div>
+                </button>
+            </div>
+
+            <div className="p-2 border-t border-gray-100 dark:border-white/5 pt-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-8 h-8 rounded-xl bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 flex items-center justify-center">
+                    <Palette size={16} />
+                  </div>
+                  <span className="font-bold text-xs text-gray-900 dark:text-white">Theme Accent</span>
+                </div>
+                <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1 px-1">
+                  {APP_THEMES.map(theme => (
+                    <button
+                      key={theme.id}
+                      onClick={() => setThemeColor(theme.id)}
+                      aria-label={`Select ${theme.name} theme`}
+                      className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 transition-all ios-touch-target ${themeColor === theme.id ? 'border-gray-900 dark:border-white scale-110 shadow-sm' : 'border-transparent hover:scale-105'}`}
+                      style={{ backgroundColor: theme.hex }}
+                    >
+                      {themeColor === theme.id && <Check size={14} className="text-white" strokeWidth={3} />}
+                    </button>
+                  ))}
+                </div>
+            </div>
+
+            {setBackgroundImage && (
+                <div className="p-2 border-t border-gray-100 dark:border-white/5 pt-4">
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                            <ImageIcon size={16} />
+                        </div>
+                        <span className="font-bold text-xs text-gray-900 dark:text-white">Background Image</span>
+                    </div>
+                    
+                    <div className="flex flex-col gap-3">
+                        {backgroundImage && (
+                            <div className="relative h-32 w-full rounded-2xl overflow-hidden shadow-sm group">
+                                <img src={backgroundImage} className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => setBackgroundImage(null)} className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md hover:bg-red-600 transition-colors">Hapus</button>
+                                </div>
+                            </div>
+                        )}
+                        
+                        <label className="flex items-center justify-center w-full border-2 border-dashed border-gray-200 dark:border-white/10 rounded-2xl p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                            <div className="flex flex-col items-center gap-1">
+                                <Upload size={20} className="text-gray-400" />
+                                <span className="text-[10px] font-bold text-gray-500">Upload Image (Blurry & 50% Opacity)</span>
+                            </div>
+                            <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                        </label>
+                    </div>
+                </div>
+            )}
+          </div>
+      </SettingsModal>
+
+      {/* 3. Categories Modal */}
+      <SettingsModal title={t('set.cats')} isOpen={showCategoriesModal} onClose={() => setShowCategoriesModal(false)}>
+          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1 mb-4">
+              <button onClick={() => setCatTypeFilter('expense')} className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ios-touch-target ${catTypeFilter === 'expense' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}>{t('add.expense')}</button>
+              <button onClick={() => setCatTypeFilter('income')} className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ios-touch-target ${catTypeFilter === 'income' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}>{t('add.income')}</button>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-2 max-h-[50vh] overflow-y-auto no-scrollbar pr-1">
+            {filteredCategories.map(cat => (
+              <div key={cat.id} className="flex justify-between items-center p-2.5 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl group transition-colors border border-transparent hover:border-gray-100 dark:hover:border-white/5">
+                <div className="flex items-center gap-3">
+                    <span className="text-lg bg-white dark:bg-black/40 w-8 h-8 flex items-center justify-center rounded-xl shadow-sm border border-gray-100 dark:border-white/10">{cat.icon}</span>
+                    <span className="font-bold text-xs text-gray-700 dark:text-gray-200">{cat.name}</span>
+                </div>
+                <button onClick={() => onDeleteCategory(cat.id)} aria-label="Delete category" className="text-gray-300 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all ios-touch-target"><Trash2 size={16}/></button>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 flex gap-2 pt-4 border-t border-gray-100 dark:border-gray-800">
+            {/* Visual Emoji Picker Button */}
+            <button 
+              onClick={() => setShowEmojiPicker(true)}
+              className="w-10 h-10 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-white/10 flex items-center justify-center text-xl hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ios-touch-target"
+            >
+              {newCatIcon}
+            </button>
+            <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="New Category..." className="flex-1 px-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary font-medium dark:text-white border border-gray-100 dark:border-white/10" />
+            <button onClick={handleAddCategoryClick} aria-label="Add category" className="w-10 h-10 bg-black dark:bg-white text-white dark:text-black rounded-xl flex items-center justify-center ios-touch-target shadow-lg"><Plus size={20}/></button>
+          </div>
+      </SettingsModal>
+
+
       {isConfirmOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 w-full">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 w-full animate-ios-fade-in">
            <div className="bg-white dark:bg-[#1C1C1E] w-full max-w-xs p-6 rounded-[2rem] shadow-2xl animate-shake text-center page-slide-up">
               <h2 className="font-bold text-lg mb-2 text-gray-900 dark:text-white">Verify Old PIN</h2>
               <p className="text-xs text-gray-500 mb-6">Please enter your current PIN to confirm.</p>
@@ -699,7 +745,7 @@ const Settings: React.FC<SettingsProps> = ({
       )}
 
       {isResetConfirmOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 w-full">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 w-full animate-ios-fade-in">
            <div className="bg-white dark:bg-[#1C1C1E] w-full max-w-xs p-6 rounded-[2rem] shadow-2xl animate-shake text-center page-slide-up border border-red-100 dark:border-red-900/30">
               <div className="w-12 h-12 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
                  <Trash2 size={24} />
@@ -731,7 +777,11 @@ const Settings: React.FC<SettingsProps> = ({
       {/* Export Modal */}
       {showExportModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-ios-fade-in">
-          <div className="bg-white dark:bg-[#1C1C1E] w-full max-w-sm rounded-[2rem] p-6 shadow-2xl page-slide-up">
+          <div 
+             className="absolute inset-0" 
+             onClick={() => setShowExportModal(false)}
+          ></div>
+          <div className="bg-white dark:bg-[#1C1C1E] w-full max-w-sm rounded-[2rem] p-6 shadow-2xl page-slide-up relative z-10">
             <h2 className="text-lg font-bold text-center mb-1 dark:text-white">{t('set.export')}</h2>
             <p className="text-center text-xs text-gray-400 mb-5">Pilih periode laporan</p>
 

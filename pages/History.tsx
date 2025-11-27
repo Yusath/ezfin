@@ -200,7 +200,7 @@ const HistoryPage: React.FC<HistoryProps> = ({ transactions, onDelete }) => {
         )}
       </div>
 
-      <div className={`fixed bottom-20 left-0 right-0 p-6 transition-transform duration-500 z-40 ${isSelectionMode && selectedIds.size > 0 ? 'translate-y-0' : 'translate-y-[200%]'}`}>
+      <div className={`fixed bottom-36 md:bottom-10 left-0 right-0 p-6 transition-transform duration-500 z-[60] ${isSelectionMode && selectedIds.size > 0 ? 'translate-y-0' : 'translate-y-[200%]'}`}>
          <button 
            onClick={() => setIsConfirmOpen(true)}
            className="w-full max-w-md mx-auto bg-red-500 text-white shadow-xl shadow-red-500/30 rounded-2xl py-3.5 font-bold flex items-center justify-center gap-2 active:scale-95 transition-all ios-touch-target"

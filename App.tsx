@@ -542,10 +542,10 @@ function App() {
             <main className="flex-1 w-full">
               {/* 
                 Mobile Padding Fix:
-                pb-32 (128px) ensures content clears the fixed bottom navbar (approx 80px) + buffer.
+                pb-56 (224px) ensures content clears the fixed bottom navbar and floating buttons.
                 max-w limits width on large screens.
               */}
-              <div className="pb-32 md:pb-8 md:p-8 max-w-[1600px] mx-auto w-full pt-safe">
+              <div className="pb-56 md:pb-8 md:p-8 max-w-[1600px] mx-auto w-full pt-safe">
                 <Routes>
                   <Route 
                     path="/" 

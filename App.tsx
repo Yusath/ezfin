@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { HashRouter as Router, Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { Transaction, UserProfile, ToastMessage, Category } from './types';
 import { DEFAULT_USER_PROFILE, APP_THEMES } from './constants';
@@ -8,14 +8,16 @@ import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import PinScreen from './components/PinScreen';
 import { ToastContainer } from './components/Toast';
-import Dashboard from './pages/Dashboard';
-import AddTransaction from './pages/AddTransaction';
-import Stats from './pages/Stats';
-import Settings from './pages/Settings';
-import HistoryPage from './pages/History';
 import { googleSheetService } from './services/googleSheetService';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { hashPin } from './utils/security';
+import { deriveKeyFromHash, getSecureItem, setSecureItem } from './utils/secureStorage';
+
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const AddTransaction = React.lazy(() => import('./pages/AddTransaction'));
+const Stats = React.lazy(() => import('./pages/Stats'));
+const Settings = React.lazy(() => import('./pages/Settings'));
+const HistoryPage = React.lazy(() => import('./pages/History'));
 
 const EditTransactionWrapper = ({ transactions, categories, onSave, addToast }: any) => {
   const { id } = useParams();
@@ -33,38 +35,27 @@ function App() {
   
   // SESSION SECURITY: Idle PIN Lock Logic
   // Default to Locked on load until verified or timed out
-  const [isLocked, setIsLocked] = useState(() => {
-    const lastActive = localStorage.getItem('ezfin_last_active');
-    if (!lastActive) return true; // First load or cleared storage -> Locked
-    
-    // Check if session expired
-    const elapsed = Date.now() - parseInt(lastActive, 10);
-    return elapsed > INACTIVITY_LIMIT_MS;
-  });
-  
+  const [cryptoKey, setCryptoKey] = useState<CryptoKey | null>(null);
+  const [isLocked, setIsLocked] = useState(true);
+
   // Default to Light Mode (false) unless 'dark' is explicitly saved
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('theme');
-    return saved === 'dark';
-  });
-  
+  const [darkMode, setDarkMode] = useState(false);
+
   // Theme Color State
-  const [themeColor, setThemeColor] = useState(() => {
-    return localStorage.getItem('theme_color') || 'blue';
-  });
+  const [themeColor, setThemeColor] = useState('blue');
 
   // Background Image State
-  const [backgroundImage, setBackgroundImage] = useState<string | null>(() => {
-    return localStorage.getItem('ezfin_bg_image');
-  });
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
 
   const handleSetBackgroundImage = (dataUrl: string | null) => {
-    if (dataUrl) {
-      localStorage.setItem('ezfin_bg_image', dataUrl);
-    } else {
-      localStorage.removeItem('ezfin_bg_image');
-    }
     setBackgroundImage(dataUrl);
+    if (!cryptoKey) return;
+
+    if (dataUrl) {
+      setSecureItem('ezfin_bg_image', dataUrl, cryptoKey).catch(console.error);
+    } else {
+      setSecureItem('ezfin_bg_image', null, cryptoKey).catch(console.error);
+    }
   };
   
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -77,8 +68,9 @@ function App() {
   // -- Activity Monitor Effect (Banking Style) --
   useEffect(() => {
     const updateActivity = () => {
-      // Refresh the timestamp on interaction
-      localStorage.setItem('ezfin_last_active', Date.now().toString());
+      if (cryptoKey) {
+        setSecureItem('ezfin_last_active', Date.now().toString(), cryptoKey).catch(console.error);
+      }
     };
 
     // Attach listeners to window to catch general activity
@@ -94,7 +86,7 @@ function App() {
       window.removeEventListener('touchstart', updateActivity);
       window.removeEventListener('scroll', updateActivity);
     };
-  }, []);
+  }, [cryptoKey]);
 
   // -- Initialization Effect (Data Loading) --
   useEffect(() => {
@@ -163,6 +155,47 @@ function App() {
     initData();
   }, []);
 
+  // -- Derive encryption key from stored PIN hash --
+  useEffect(() => {
+    if (!user.pin) return;
+
+    deriveKeyFromHash(user.pin)
+      .then(setCryptoKey)
+      .catch((err) => console.error('Failed to derive secure storage key', err));
+  }, [user.pin]);
+
+  // -- Load secure preferences when key is ready --
+  useEffect(() => {
+    if (!cryptoKey) return;
+
+    const loadSecurePrefs = async () => {
+      const lastActive = await getSecureItem('ezfin_last_active', cryptoKey);
+      if (lastActive) {
+        const elapsed = Date.now() - parseInt(lastActive, 10);
+        setIsLocked(elapsed > INACTIVITY_LIMIT_MS);
+      } else {
+        setIsLocked(true);
+      }
+
+      const savedTheme = await getSecureItem('theme', cryptoKey);
+      if (savedTheme) {
+        setDarkMode(savedTheme === 'dark');
+      }
+
+      const savedColor = await getSecureItem('theme_color', cryptoKey);
+      if (savedColor) {
+        setThemeColor(savedColor);
+      }
+
+      const savedBg = await getSecureItem('ezfin_bg_image', cryptoKey);
+      if (savedBg !== null) {
+        setBackgroundImage(savedBg);
+      }
+    };
+
+    loadSecurePrefs();
+  }, [cryptoKey]);
+
   // -- Secured Cloud Sync Effect --
   useEffect(() => {
     // Only trigger auto-sync if:
@@ -182,12 +215,12 @@ function App() {
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
+      if (cryptoKey) setSecureItem('theme', 'dark', cryptoKey).catch(console.error);
     } else {
       document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
+      if (cryptoKey) setSecureItem('theme', 'light', cryptoKey).catch(console.error);
     }
-  }, [darkMode]);
+  }, [darkMode, cryptoKey]);
 
   // -- Theme Color Effect --
   useEffect(() => {
@@ -202,13 +235,13 @@ function App() {
     };
 
     document.documentElement.style.setProperty('--primary-color', hexToRgb(selectedTheme.hex));
-    localStorage.setItem('theme_color', themeColor);
-  }, [themeColor]);
+    if (cryptoKey) setSecureItem('theme_color', themeColor, cryptoKey).catch(console.error);
+  }, [themeColor, cryptoKey]);
 
   // -- Handlers --
   const handleUnlock = () => {
     // Reset timer immediately upon unlock
-    localStorage.setItem('ezfin_last_active', Date.now().toString());
+    if (cryptoKey) setSecureItem('ezfin_last_active', Date.now().toString(), cryptoKey).catch(console.error);
     setIsLocked(false);
   };
 
@@ -546,7 +579,14 @@ function App() {
                 max-w limits width on large screens.
               */}
               <div className="pb-56 md:pb-8 md:p-8 max-w-[1600px] mx-auto w-full pt-safe">
-                <Routes>
+                <Suspense
+                  fallback={
+                    <div className="flex items-center justify-center py-10">
+                      <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  }
+                >
+                  <Routes>
                   <Route 
                     path="/" 
                     element={
@@ -605,12 +645,12 @@ function App() {
                       </div>
                     } 
                   />
-                  <Route 
-                    path="/settings" 
+                  <Route
+                    path="/settings"
                     element={
                       <div className="md:max-w-3xl md:mx-auto">
-                        <Settings 
-                          user={user} 
+                        <Settings
+                          user={user}
                           categories={categories}
                           darkMode={darkMode}
                           themeColor={themeColor}
@@ -627,9 +667,10 @@ function App() {
                           onGoogleSessionError={handleGoogleSessionError}
                         />
                       </div>
-                    } 
+                    }
                   />
-                </Routes>
+                  </Routes>
+                </Suspense>
               </div>
             </main>
 

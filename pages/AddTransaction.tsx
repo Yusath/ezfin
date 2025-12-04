@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Category, Transaction, TransactionItem } from '../types';
-import { Camera, Plus, Trash2, Sparkles, ChevronLeft, Upload, ScanLine, Image as ImageIcon, ChevronDown, Check, X, Grid } from 'lucide-react';
+import { Camera, Plus, Trash2, ChevronLeft, Upload, ScanLine, Image as ImageIcon, ChevronDown, Check, X, Grid } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { scanReceipt } from '../services/geminiService';
+import { scanReceipt } from '../services/ocrService';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface AddTransactionProps {
@@ -44,7 +44,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
   // UI State
   const [isSaving, setIsSaving] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const [scanStatus, setScanStatus] = useState('Connecting...');
+  const [scanStatus, setScanStatus] = useState('Menyiapkan pemindai...');
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
   // Initialize Category from initialData
@@ -167,20 +167,20 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
 
   const processReceipt = async (file: File) => {
     setIsScanning(true);
-    setScanStatus("Menganalisis Struk...");
+    setScanStatus("Memindai struk...");
     try {
       const data = await scanReceipt(file);
-      if (data) { 
-        populateFromScan(data); 
-        if(addToast) addToast('Scan Berhasil! Data terisi.', 'success'); 
-      } else { 
-        throw new Error("Empty response from AI"); 
+      if (data) {
+        populateFromScan(data);
+        if(addToast) addToast('Scan Berhasil! Data terisi.', 'success');
+      } else {
+        throw new Error("Hasil pemindaian kosong");
       }
     } catch (error) {
-      console.error("Gemini Scan Error:", error);
-      if(addToast) addToast('Gagal memproses struk. Coba lagi.', 'error');
-    } finally { 
-      setIsScanning(false); 
+      console.error("Tesseract Scan Error:", error);
+      if(addToast) addToast('Gagal memproses struk. Pastikan foto jelas dan coba lagi.', 'error');
+    } finally {
+      setIsScanning(false);
     }
   };
 
@@ -273,10 +273,10 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
             <div className="relative w-20 h-20 mb-6">
                <div className="absolute inset-0 border-4 border-t-blue-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
                <div className="absolute inset-0 flex items-center justify-center">
-                  <Sparkles className="text-blue-400 animate-pulse" size={28} />
+                  <ScanLine className="text-blue-400 animate-pulse" size={28} />
                </div>
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">AI Sedang Bekerja</h2>
+            <h2 className="text-xl font-bold text-white mb-2">Pemindai Struk</h2>
             <p className="text-gray-400 text-xs font-medium animate-pulse">{scanStatus}</p>
          </div>
       </div>
@@ -331,7 +331,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
           <div className="animate-slide-in-right">
             <div className="flex justify-between items-center mb-2 px-1">
                 <span className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Metode Input</span>
-                <span className="text-[10px] font-medium text-blue-500 flex items-center gap-1"><Sparkles size={10}/> AI Support</span>
+                <span className="text-[10px] font-medium text-blue-500 flex items-center gap-1">Tesseract OCR</span>
             </div>
             <div className="flex gap-4 h-20">
                 <button 
@@ -360,15 +360,15 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
                 </button>
             </div>
 
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
-              accept="image/*,application/pdf" 
-              onChange={handleFileChange} 
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={handleFileChange}
             />
-            <input 
-              type="file" 
+            <input
+              type="file"
               ref={cameraInputRef} 
               className="hidden" 
               accept="image/*" 

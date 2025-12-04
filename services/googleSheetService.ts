@@ -10,12 +10,33 @@ declare global {
 
 // User provided Client ID
 const DEFAULT_CLIENT_ID = "28569786950-2lnehaar8vn0cueo4gpav84umuc30kc1.apps.googleusercontent.com";
-// PERSISTENCE: Key for local storage
+// PERSISTENCE: Key for session storage (ephemeral per browser session)
 const TOKEN_STORAGE_KEY = 'ezfin_google_access_token';
 
-// Initial load from Env or LocalStorage
-let CLIENT_ID = process.env.GOOGLE_CLIENT_ID || localStorage.getItem('GOOGLE_CLIENT_ID') || DEFAULT_CLIENT_ID;
-let API_KEY = process.env.GOOGLE_API_KEY || localStorage.getItem('GOOGLE_API_KEY') || "";
+// Initial load from Env only; avoid persisting client secrets in storage
+let CLIENT_ID = process.env.GOOGLE_CLIENT_ID || DEFAULT_CLIENT_ID;
+let API_KEY = process.env.GOOGLE_API_KEY || "";
+
+const readSessionToken = () => {
+  try {
+    return sessionStorage.getItem(TOKEN_STORAGE_KEY);
+  } catch (err) {
+    console.warn('Session storage unavailable, falling back to memory-only token');
+    return null;
+  }
+};
+
+const writeSessionToken = (token: string | null) => {
+  try {
+    if (token) {
+      sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
+    } else {
+      sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+    }
+  } catch (err) {
+    console.warn('Unable to persist session token; continuing in memory only');
+  }
+};
 
 const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4", "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
 const SCOPES = "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file openid email profile";
@@ -57,13 +78,11 @@ export const googleSheetService = {
 
   updateCredentials: (clientId: string, apiKey?: string) => {
     CLIENT_ID = clientId;
-    localStorage.setItem('GOOGLE_CLIENT_ID', clientId);
     if (apiKey) {
       API_KEY = apiKey;
-      localStorage.setItem('GOOGLE_API_KEY', apiKey);
     }
     // Security: Clear existing session when creds change
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    writeSessionToken(null);
     accessToken = null;
     isInitialized = false;
     tokenClient = undefined;
@@ -118,7 +137,7 @@ export const googleSheetService = {
           }
           // LOGIN SUCCESS: Save token
           accessToken = resp.access_token;
-          localStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
+          writeSessionToken(resp.access_token);
           
           // Ensure GAPI uses this token immediately
           if (window.gapi && window.gapi.client) {
@@ -127,10 +146,10 @@ export const googleSheetService = {
         },
       });
 
-      // 5. AUTO RESTORE SESSION from LocalStorage
-      const savedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+      // 5. AUTO RESTORE SESSION from sessionStorage
+      const savedToken = readSessionToken();
       if (savedToken) {
-          console.log("Restoring Google Session from LocalStorage...");
+          console.log("Restoring Google Session from sessionStorage...");
           accessToken = savedToken;
           
           // IMPORTANT: Restore token to GAPI client immediately
@@ -165,7 +184,7 @@ export const googleSheetService = {
                 reject(resp);
             } else {
                 accessToken = resp.access_token;
-                localStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
+                writeSessionToken(resp.access_token);
 
                 if (window.gapi && window.gapi.client) {
                    window.gapi.client.setToken(resp);
@@ -200,7 +219,7 @@ export const googleSheetService = {
       }
     }
     window.gapi?.client?.setToken(null);
-    localStorage.removeItem(TOKEN_STORAGE_KEY); 
+    writeSessionToken(null);
     accessToken = null;
   },
 

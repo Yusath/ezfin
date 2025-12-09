@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, useParams, Navigate } from 'react-router-dom';
-import { Transaction, UserProfile, ToastMessage, Category } from './types';
+import { Transaction, UserProfile, ToastMessage, Category, ToastAction } from './types';
 import { DEFAULT_USER_PROFILE, APP_THEMES } from './constants';
 import { dbService } from './services/db';
 import Navbar from './components/Navbar';
@@ -212,9 +212,9 @@ function App() {
     setIsLocked(false);
   };
 
-  const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+  const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info', action?: ToastAction) => {
     const id = Math.random().toString(36).substring(7);
-    setToasts((prev) => [...prev, { id, message, type }]);
+    setToasts((prev) => [...prev, { id, message, type, action }]);
   };
 
   const removeToast = (id: string) => {

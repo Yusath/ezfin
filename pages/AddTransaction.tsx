@@ -1,15 +1,15 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Category, Transaction, TransactionItem } from '../types';
+import { Category, Transaction, TransactionItem, ToastAction } from '../types';
 import { Camera, Plus, Trash2, Sparkles, ChevronLeft, Upload, ScanLine, Image as ImageIcon, ChevronDown, Check, X, Grid } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { scanReceipt } from '../services/aiService';
+import { scanReceipt, scanReceiptOffline } from '../services/aiService';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface AddTransactionProps {
   categories: Category[];
   onSave: (tx: Transaction) => Promise<void>; 
-  addToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
+  addToast?: (msg: string, type: 'success' | 'error' | 'info', action?: ToastAction) => void;
   initialData?: Transaction;
 }
 
@@ -178,10 +178,36 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ categories, onSave, add
       }
     } catch (error: any) {
       console.error("AI Scan Error:", error);
-      if(addToast) addToast(`Gagal memproses struk: ${error.message || 'Cek koneksi/API Key'}`, 'error');
+      
+      // FALLBACK HANDLER FOR MISSING KEY
+      if (error.message === 'MISSING_API_KEY') {
+          if (addToast) {
+              addToast("API AI belum diatur.", 'error', {
+                  label: "Gunakan Offline OCR hanya kali ini",
+                  onClick: () => processReceiptOffline(file)
+              });
+          }
+      } else {
+          if(addToast) addToast(`Gagal memproses struk: ${error.message}`, 'error');
+      }
     } finally { 
       setIsScanning(false); 
     }
+  };
+
+  const processReceiptOffline = async (file: File) => {
+      setIsScanning(true);
+      setScanStatus("Scanning Offline (Tesseract)...");
+      try {
+          const data = await scanReceiptOffline(file);
+          populateFromScan(data);
+          if(addToast) addToast('Scan Offline Berhasil.', 'success');
+      } catch (err: any) {
+          console.error("Offline Scan Error", err);
+          if(addToast) addToast(`Offline Scan Gagal: ${err.message}`, 'error');
+      } finally {
+          setIsScanning(false);
+      }
   };
 
   const populateFromScan = (data: any) => {

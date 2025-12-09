@@ -1,13 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { UserProfile, Category, Transaction } from '../types';
-import { Moon, Shield, Trash2, Plus, Cloud, FileSpreadsheet, LogOut, Loader2, ArrowRight, Download, Globe, FileText, Folder, ChevronDown, Sliders, Tag, Lock, Check, AlertTriangle, Smile, X, Grid, Palette, Image as ImageIcon, Upload } from 'lucide-react';
+import { UserProfile, Category, Transaction, AIConfig } from '../types';
+import { Moon, Shield, Trash2, Plus, Cloud, FileSpreadsheet, LogOut, Loader2, ArrowRight, Download, Globe, FileText, Folder, ChevronDown, Sliders, Tag, Lock, Check, AlertTriangle, Smile, X, Grid, Palette, Image as ImageIcon, Upload, Cpu, Key, Server, Bot } from 'lucide-react';
 import { googleSheetService } from '../services/googleSheetService';
 import { useLanguage } from '../contexts/LanguageContext';
 import { dbService } from '../services/db';
 import { exportService } from '../services/exportService';
 import { hashPin } from '../utils/security';
 import { APP_THEMES } from '../constants';
+import { getAIConfig, saveAIConfig } from '../services/aiService';
 
 interface SettingsProps {
   user: UserProfile;
@@ -112,6 +113,7 @@ const Settings: React.FC<SettingsProps> = ({
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [showPreferencesModal, setShowPreferencesModal] = useState(false);
   const [showCategoriesModal, setShowCategoriesModal] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
 
   const [catTypeFilter, setCatTypeFilter] = useState<'expense' | 'income'>('expense');
   const [newCatName, setNewCatName] = useState('');
@@ -137,6 +139,9 @@ const Settings: React.FC<SettingsProps> = ({
   const [foundFolders, setFoundFolders] = useState<Array<{id: string, name: string}>>([]);
   const [selectedFolder, setSelectedFolder] = useState<{id: string, name: string} | null>(null);
   const [newSheetNameSuffix, setNewSheetNameSuffix] = useState('');
+
+  // AI Config State
+  const [aiConfig, setAiConfig] = useState<AIConfig>(getAIConfig());
 
   useEffect(() => {
     const loadTx = async () => {
@@ -411,6 +416,12 @@ const Settings: React.FC<SettingsProps> = ({
     });
     addToast("Google Account Disconnected", "info");
   };
+  
+  const handleSaveAIConfig = () => {
+    saveAIConfig(aiConfig);
+    setShowAIModal(false);
+    addToast("AI Configuration Saved", "success");
+  };
 
   return (
     <div className="pt-safe min-h-screen page-transition pb-28 md:pb-10">
@@ -471,6 +482,23 @@ const Settings: React.FC<SettingsProps> = ({
                 </div>
                 <span className="font-bold text-xs text-gray-900 dark:text-white leading-none">{t('set.cats')}</span>
                 <span className="text-[9px] text-gray-400 font-medium mt-0.5">Edit Items</span>
+            </button>
+            
+            {/* AI Configuration */}
+            <button 
+                onClick={() => setShowAIModal(true)}
+                className="col-span-2 flex flex-row items-center justify-between p-3 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-gray-100 dark:border-white/5 shadow-sm ios-touch-target group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+            >
+                 <div className="flex items-center gap-3">
+                     <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center text-purple-600 dark:text-purple-400 group-active:scale-95 transition-transform">
+                        <Cpu size={16} />
+                    </div>
+                    <div className="text-left">
+                        <span className="font-bold text-xs text-gray-900 dark:text-white block leading-none">Konfigurasi AI</span>
+                        <span className="text-[9px] text-gray-400 font-medium mt-0.5">Atur Provider (OpenAI, Groq, dll)</span>
+                    </div>
+                 </div>
+                 <ArrowRight size={14} className="text-gray-300 dark:text-gray-600" />
             </button>
         </div>
 
@@ -714,6 +742,64 @@ const Settings: React.FC<SettingsProps> = ({
             <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="New Category..." className="flex-1 px-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary font-medium dark:text-white border border-gray-100 dark:border-white/10" />
             <button onClick={handleAddCategoryClick} aria-label="Add category" className="w-9 h-9 bg-black dark:bg-white text-white dark:text-black rounded-xl flex items-center justify-center ios-touch-target shadow-md active:scale-95 transition-transform"><Plus size={16}/></button>
           </div>
+      </SettingsModal>
+      
+      {/* 4. AI Configuration Modal */}
+      <SettingsModal title="Konfigurasi AI" isOpen={showAIModal} onClose={() => setShowAIModal(false)}>
+         <div className="space-y-4">
+            <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-xl border border-purple-100 dark:border-purple-500/20">
+               <p className="text-[10px] text-purple-700 dark:text-purple-300 leading-relaxed font-medium">
+                  Anda dapat menggunakan penyedia AI apa pun yang kompatibel dengan format OpenAI (seperti Groq, DeepSeek, OpenRouter, atau LocalAI).
+               </p>
+            </div>
+
+            <div>
+               <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1.5 block flex items-center gap-1">
+                  <Server size={12}/> Base URL
+               </label>
+               <input 
+                  value={aiConfig.baseUrl} 
+                  onChange={e => setAiConfig({...aiConfig, baseUrl: e.target.value})}
+                  placeholder="https://api.openai.com/v1"
+                  className="w-full bg-gray-50 dark:bg-black/20 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary border border-gray-100 dark:border-white/10"
+               />
+               <p className="text-[9px] text-gray-400 mt-1 ml-1">
+                  Contoh: <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">https://api.groq.com/openai/v1</code>
+               </p>
+            </div>
+
+            <div>
+               <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1.5 block flex items-center gap-1">
+                  <Key size={12}/> API Key
+               </label>
+               <input 
+                  value={aiConfig.apiKey} 
+                  onChange={e => setAiConfig({...aiConfig, apiKey: e.target.value})}
+                  type="password"
+                  placeholder="sk-..."
+                  className="w-full bg-gray-50 dark:bg-black/20 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary border border-gray-100 dark:border-white/10"
+               />
+            </div>
+
+            <div>
+               <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-1.5 block flex items-center gap-1">
+                  <Bot size={12}/> Model Name
+               </label>
+               <input 
+                  value={aiConfig.modelName} 
+                  onChange={e => setAiConfig({...aiConfig, modelName: e.target.value})}
+                  placeholder="gpt-4o"
+                  className="w-full bg-gray-50 dark:bg-black/20 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary border border-gray-100 dark:border-white/10"
+               />
+            </div>
+
+            <button 
+               onClick={handleSaveAIConfig}
+               className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-500/30 ios-touch-target hover:bg-blue-700 transition-colors text-xs mt-2"
+            >
+               Simpan Konfigurasi
+            </button>
+         </div>
       </SettingsModal>
 
 

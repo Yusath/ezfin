@@ -1,3 +1,4 @@
+
 export interface TransactionItem {
   id: string;
   name: string;
@@ -38,4 +39,10 @@ export interface ToastMessage {
   id: string;
   message: string;
   type: ToastType;
+}
+
+export interface AIConfig {
+  baseUrl: string;
+  apiKey: string;
+  modelName: string;
 }

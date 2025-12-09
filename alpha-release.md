@@ -1,14 +1,14 @@
 # EZFin AutoMate - Alpha Release v0.1.0 🚀
 
-**Student-Focused Personal Finance Manager with OCR & Cloud Sync**
+**Student-Focused Personal Finance Manager with AI & Cloud Sync**
 
 Selamat datang di rilis alpha pertama dari **EZFin AutoMate**! Aplikasi ini dirancang khusus untuk mahasiswa dan pelajar Indonesia yang ingin mengelola keuangan dengan cerdas, praktis, dan modern.
 
 ## 🌟 Fitur Unggulan (Key Features)
 
-### 1. 🤖 OCR Receipt Scanner (Powered by Tesseract)
+### 1. 🤖 AI Receipt Scanner (Powered by Gemini 2.5)
 Malas ketik manual? Cukup foto struk belanja Anda!
-*   **Auto-Extraction:** OCR otomatis mendeteksi Nama Toko, Tanggal, dan Daftar Item (Nama, Qty, Harga).
+*   **Auto-Extraction:** AI otomatis mendeteksi Nama Toko, Tanggal, dan Daftar Item (Nama, Qty, Harga).
 *   **Smart Formatting:** Mendukung format struk Indonesia (e.g., "10.000" sebagai "10000").
 *   **Auto-Categorization:** Menebak kategori pengeluaran berdasarkan nama toko.
 
@@ -24,10 +24,10 @@ Keamanan data adalah prioritas.
 *   **Idle Lock:** Aplikasi otomatis terkunci jika tidak ada aktivitas selama 30 menit (seperti M-Banking).
 *   **Secure Storage:** Token akses Google disimpan aman di session storage.
 
-### 4. 💡 Offline Spending Insights
-Bingung cara hemat? Dapatkan ringkasan cepat otomatis!
-*   **Personalized Snapshot:** Ringkasan kategori terbesar, rata-rata pengeluaran, dan tiket terbesar.
-*   **Selalu Siap:** Bekerja sepenuhnya offline tanpa layanan AI eksternal.
+### 4. 💡 AI Financial Advisor
+Bingung cara hemat? Tanya AI!
+*   **Personalized Advice:** Dapatkan saran penghematan berdasarkan data pengeluaran *real* Anda bulan ini.
+*   **Gen-Z Friendly:** Bahasa santai, tidak kaku, dan memotivasi.
 
 ### 5. 📊 Comprehensive Analytics & Export
 *   **Interactive Charts:** Visualisasi pengeluaran mingguan/bulanan/tahunan.
@@ -37,7 +37,7 @@ Bingung cara hemat? Dapatkan ringkasan cepat otomatis!
 
 *   **Frontend:** React 19, TypeScript, Vite
 *   **Styling:** Tailwind CSS (iOS Design System)
-*   **OCR:** Tesseract (via ESM CDN)
+*   **AI:** Google Gemini API (`gemini-2.5-flash`)
 *   **Database:** IndexedDB (Local) + Google Sheets API (Cloud)
 
 ---

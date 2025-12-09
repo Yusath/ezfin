@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Transaction, UserProfile } from '../types';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
-import { TrendingUp, AlertCircle, Lightbulb } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
+import { Bot, X, Sparkles, TrendingUp, AlertCircle } from 'lucide-react';
+import { getFinancialAdvice } from '../services/aiService';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface StatsProps {
@@ -14,7 +15,9 @@ const COLORS = ['#007AFF', '#34C759', '#FF9500', '#AF52DE', '#FF2D55', '#5856D6'
 
 const Stats: React.FC<StatsProps> = ({ transactions, user }) => {
   const { t } = useLanguage();
-  const firstName = user.name?.split(' ')[0] || 'Kamu';
+  const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
+  const [advice, setAdvice] = useState('');
+  const [loadingAdvice, setLoadingAdvice] = useState(false);
 
   // 1. Calculate Expenses by Category
   const expenseTransactions = transactions.filter(t => t.type === 'expense');
@@ -32,9 +35,15 @@ const Stats: React.FC<StatsProps> = ({ transactions, user }) => {
     }))
     .sort((a, b) => b.value - a.value);
 
-  const topCategory = chartData[0];
-  const biggestTicket = expenseTransactions.reduce((max, tx) => tx.totalAmount > max.totalAmount ? tx : max, { totalAmount: 0 } as Transaction);
-  const averageExpense = expenseTransactions.length ? Math.round(totalExpense / expenseTransactions.length) : 0;
+  const handleAskAI = async () => {
+    setIsAdvisorOpen(true);
+    if (!advice) {
+      setLoadingAdvice(true);
+      const result = await getFinancialAdvice(transactions, user.name);
+      setAdvice(result);
+      setLoadingAdvice(false);
+    }
+  };
 
   return (
     <div className="pt-safe min-h-screen page-transition pb-32">
@@ -43,34 +52,49 @@ const Stats: React.FC<StatsProps> = ({ transactions, user }) => {
       </div>
 
       <div className="px-4 space-y-6">
-
-        {/* Quick Insights */}
+        
+        {/* AI ADVISOR SECTION - NOW AT THE TOP */}
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-[1.5rem] p-5 text-white shadow-lg shadow-indigo-500/25 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-          <div className="relative z-10 flex items-center gap-4">
-            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/10">
-              <Lightbulb size={22} className="text-white" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+            
+            <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm border border-white/10">
+                        <Bot size={20} className="text-white" />
+                    </div>
+                    <div>
+                        <h2 className="font-bold text-lg leading-tight">{t('stats.advisor.btn')}</h2>
+                        <p className="text-indigo-100 text-xs font-medium opacity-90">{t('stats.advisor.desc')}</p>
+                    </div>
+                </div>
+
+                {!isAdvisorOpen ? (
+                    <button 
+                        onClick={handleAskAI}
+                        className="w-full bg-white text-indigo-600 py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-indigo-50 active:scale-95 transition-all flex items-center justify-center gap-2"
+                    >
+                        <Sparkles size={16} />
+                        Minta Analisis AI
+                    </button>
+                ) : (
+                    <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10 animate-fade-in">
+                         {loadingAdvice ? (
+                             <div className="flex items-center gap-3">
+                                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                 <span className="text-xs font-medium animate-pulse">Sedang menganalisis data keuanganmu...</span>
+                             </div>
+                         ) : (
+                             <div>
+                                 <div className="flex justify-between items-start mb-2">
+                                     <h3 className="text-xs font-bold uppercase tracking-wider opacity-70">Saran AI:</h3>
+                                     <button onClick={() => setIsAdvisorOpen(false)} className="p-1 hover:bg-white/10 rounded-full transition-colors"><X size={14}/></button>
+                                 </div>
+                                 <p className="text-sm font-medium leading-relaxed">{advice}</p>
+                             </div>
+                         )}
+                    </div>
+                )}
             </div>
-            <div className="flex-1 space-y-1">
-              <p className="text-xs uppercase tracking-wider text-indigo-100 font-semibold">Ringkasan Cepat</p>
-              <p className="text-[11px] text-indigo-100/90">Halo {firstName}, berikut ringkasan terbaru.</p>
-              <p className="text-lg font-bold leading-snug">{topCategory ? `Pengeluaran terbesar di ${topCategory.name}` : 'Belum ada pengeluaran terekam'}</p>
-              <div className="grid grid-cols-3 gap-3 text-[11px]">
-                <div className="bg-white/10 rounded-lg p-2">
-                  <p className="text-indigo-100 uppercase tracking-wide font-semibold mb-1">Total</p>
-                  <p className="font-bold">Rp {totalExpense.toLocaleString('id-ID')}</p>
-                </div>
-                <div className="bg-white/10 rounded-lg p-2">
-                  <p className="text-indigo-100 uppercase tracking-wide font-semibold mb-1">Rata-rata</p>
-                  <p className="font-bold">Rp {averageExpense.toLocaleString('id-ID')}</p>
-                </div>
-                <div className="bg-white/10 rounded-lg p-2">
-                  <p className="text-indigo-100 uppercase tracking-wide font-semibold mb-1">Tiket Terbesar</p>
-                  <p className="font-bold">Rp {biggestTicket.totalAmount?.toLocaleString('id-ID') || 0}</p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* CHART SECTION */}

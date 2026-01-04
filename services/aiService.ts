@@ -4,6 +4,15 @@ import { AIConfig, Transaction } from "../types";
 const AI_CONFIG_KEY = 'ezfin_ai_config';
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
+// Valid GROQ Models
+const VALID_GROQ_MODELS = [
+  'llama-3.1-8b-instant',
+  'llama-3.3-70b-versatile',
+  'llama3-8b-8192',
+  'mixtral-8x7b-32768',
+  'gemma2-9b-it'
+];
+
 // Default Config - Now using GROQ
 const DEFAULT_CONFIG: AIConfig = {
   baseUrl: "https://api.groq.com/openai/v1",
@@ -13,12 +22,36 @@ const DEFAULT_CONFIG: AIConfig = {
 
 export const getAIConfig = (): AIConfig => {
   const saved = localStorage.getItem(AI_CONFIG_KEY);
-  return saved ? JSON.parse(saved) : DEFAULT_CONFIG;
+  if (!saved) return DEFAULT_CONFIG;
+
+  try {
+    const config = JSON.parse(saved);
+
+    // Validate model name - if invalid, use default
+    if (!VALID_GROQ_MODELS.includes(config.modelName)) {
+      console.warn(`Invalid GROQ model "${config.modelName}" found in config. Using default.`);
+      config.modelName = DEFAULT_CONFIG.modelName;
+      // Save corrected config
+      localStorage.setItem(AI_CONFIG_KEY, JSON.stringify(config));
+    }
+
+    return config;
+  } catch (e) {
+    console.error("Failed to parse AI config, using default");
+    return DEFAULT_CONFIG;
+  }
 };
 
 export const saveAIConfig = (config: AIConfig) => {
+  // Validate before saving
+  if (!VALID_GROQ_MODELS.includes(config.modelName)) {
+    console.warn(`Attempted to save invalid GROQ model "${config.modelName}". Using default.`);
+    config.modelName = DEFAULT_CONFIG.modelName;
+  }
   localStorage.setItem(AI_CONFIG_KEY, JSON.stringify(config));
 };
+
+export const getValidGroqModels = () => VALID_GROQ_MODELS;
 
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -49,7 +82,7 @@ const callAIProvider = async (messages: any[], jsonMode: boolean = false): Promi
   const envApiKey = process.env.API_KEY_GROQ;
   const config = getAIConfig();
   const apiKey = envApiKey || config.apiKey;
-  
+
   if (!apiKey) {
     throw new Error("MISSING_API_KEY");
   }
@@ -57,8 +90,13 @@ const callAIProvider = async (messages: any[], jsonMode: boolean = false): Promi
   // Always use GROQ endpoint
   const endpoint = "https://api.groq.com/openai/v1/chat/completions";
 
+  // Ensure model is valid
+  const modelName = VALID_GROQ_MODELS.includes(config.modelName)
+    ? config.modelName
+    : DEFAULT_CONFIG.modelName;
+
   const payload: any = {
-    model: config.modelName || "llama-3.1-8b-instant",
+    model: modelName,
     messages: messages,
     temperature: 0.7,
   };
@@ -79,6 +117,17 @@ const callAIProvider = async (messages: any[], jsonMode: boolean = false): Promi
 
     if (!response.ok) {
       const errText = await response.text();
+
+      // Parse error for better messages
+      try {
+        const errData = JSON.parse(errText);
+        if (errData.error?.code === 'model_not_found') {
+          throw new Error(`Model tidak ditemukan. Menggunakan model default GROQ: ${DEFAULT_CONFIG.modelName}`);
+        }
+      } catch (parseErr) {
+        // If parsing fails, use original error
+      }
+
       throw new Error(`GROQ API Error (${response.status}): ${errText}`);
     }
 

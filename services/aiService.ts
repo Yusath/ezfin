@@ -4,11 +4,11 @@ import { AIConfig, Transaction } from "../types";
 const AI_CONFIG_KEY = 'ezfin_ai_config';
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-// Default Config
+// Default Config - Now using GROQ
 const DEFAULT_CONFIG: AIConfig = {
-  baseUrl: "https://api.openai.com/v1",
-  apiKey: "",
-  modelName: "gpt-4o-mini"
+  baseUrl: "https://api.groq.com/openai/v1",
+  apiKey: process.env.API_KEY_GROQ || "",
+  modelName: "llama-3.1-8b-instant"
 };
 
 export const getAIConfig = (): AIConfig => {
@@ -45,24 +45,20 @@ const fileToBase64 = (file: File): Promise<string> => {
 
 // Universal Fetch Wrapper
 const callAIProvider = async (messages: any[], jsonMode: boolean = false): Promise<string> => {
+  // Use environment variable for API key if available, fallback to config
+  const envApiKey = process.env.API_KEY_GROQ;
   const config = getAIConfig();
+  const apiKey = envApiKey || config.apiKey;
   
-  if (!config.apiKey) {
+  if (!apiKey) {
     throw new Error("MISSING_API_KEY");
   }
 
-  let endpoint = config.baseUrl;
-  if (!endpoint.endsWith('/chat/completions')) {
-     endpoint = endpoint.replace(/\/+$/, ""); 
-     if (!endpoint.includes('/v1')) {
-         endpoint = `${endpoint}/v1/chat/completions`;
-     } else {
-         endpoint = `${endpoint}/chat/completions`;
-     }
-  }
+  // Always use GROQ endpoint
+  const endpoint = "https://api.groq.com/openai/v1/chat/completions";
 
   const payload: any = {
-    model: config.modelName,
+    model: config.modelName || "llama-3.1-8b-instant",
     messages: messages,
     temperature: 0.7,
   };
@@ -76,23 +72,23 @@ const callAIProvider = async (messages: any[], jsonMode: boolean = false): Promi
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.apiKey}`
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
       const errText = await response.text();
-      throw new Error(`AI Provider Error (${response.status}): ${errText}`);
+      throw new Error(`GROQ API Error (${response.status}): ${errText}`);
     }
 
     const data = await response.json();
     return data.choices[0]?.message?.content || "";
   } catch (error: any) {
-    console.error("AI Service Error:", error);
-    // Propagate the specific error key if previously thrown
+    console.error("GROQ Service Error:", error);
+    // Propagate specific error key if previously thrown
     if (error.message === 'MISSING_API_KEY') throw error;
-    throw new Error(error.message || "Gagal menghubungi AI Provider");
+    throw new Error(error.message || "Gagal menghubungi GROQ AI Provider");
   }
 };
 

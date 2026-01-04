@@ -1,6 +1,6 @@
 
 import { Transaction, UserProfile } from "../types";
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { escapeHtml } from '../utils/security';
@@ -17,7 +17,10 @@ const formatDate = (dateString: string) => {
 
 export const exportService = {
   
-  toExcel: (transactions: Transaction[], user: UserProfile, periodLabel: string) => {
+  toExcel: async (transactions: Transaction[], user: UserProfile, periodLabel: string) => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Laporan Keuangan');
+
     // 1. Split Data
     const incomes = transactions.filter(t => t.type === 'income');
     const expenses = transactions.filter(t => t.type === 'expense');
@@ -38,53 +41,69 @@ export const exportService = {
     const profitLoss = totalIncome - totalExpense;
 
     // 3. Build Sheet with Multiple Tables
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.aoa_to_sheet([
-      [`EZFin Report: ${periodLabel}`],
-      [`User: ${user.name}`],
-      [""], // Spacer
-      ["PEMASUKAN (INCOME)"],
-    ]);
+    worksheet.addRow([`EZFin Report: ${periodLabel}`]);
+    worksheet.addRow([`User: ${user.name}`]);
+    worksheet.addRow([]); // Spacer
+    worksheet.addRow(["PEMASUKAN (INCOME)"]);
 
     // Income Section
-    const incomeStartRow = 5; // A5
-    XLSX.utils.sheet_add_aoa(worksheet, [headers], { origin: `A${incomeStartRow}` });
+    worksheet.addRow(headers);
     if (incomes.length > 0) {
-      XLSX.utils.sheet_add_aoa(worksheet, incomes.map(mapToRowArray), { origin: `A${incomeStartRow + 1}` });
+      incomes.forEach(tx => worksheet.addRow(mapToRowArray(tx)));
     } else {
-      XLSX.utils.sheet_add_aoa(worksheet, [["(Tidak ada data pemasukan)"]], { origin: `A${incomeStartRow + 1}` });
+      worksheet.addRow(["(Tidak ada data pemasukan)"]);
     }
 
     // Expense Section
-    // Calculate start row: 5 (Start) + 1 (Header) + (Data Length or 1 for message) + 2 (Spacer)
-    const incomeRows = incomes.length > 0 ? incomes.length : 1;
-    const expenseStartRow = incomeStartRow + 1 + incomeRows + 2;
-    
-    XLSX.utils.sheet_add_aoa(worksheet, [["PENGELUARAN (EXPENSE)"]], { origin: `A${expenseStartRow - 1}` });
-    XLSX.utils.sheet_add_aoa(worksheet, [headers], { origin: `A${expenseStartRow}` });
+    worksheet.addRow([]); // Spacer
+    worksheet.addRow(["PENGELUARAN (EXPENSE)"]);
+    worksheet.addRow(headers);
     
     if (expenses.length > 0) {
-      XLSX.utils.sheet_add_aoa(worksheet, expenses.map(mapToRowArray), { origin: `A${expenseStartRow + 1}` });
+      expenses.forEach(tx => worksheet.addRow(mapToRowArray(tx)));
     } else {
-      XLSX.utils.sheet_add_aoa(worksheet, [["(Tidak ada data pengeluaran)"]], { origin: `A${expenseStartRow + 1}` });
+      worksheet.addRow(["(Tidak ada data pengeluaran)"]);
     }
 
     // Summary Section
-    const expenseRows = expenses.length > 0 ? expenses.length : 1;
-    const summaryStartRow = expenseStartRow + 1 + expenseRows + 2;
+    worksheet.addRow([]); // Spacer
+    worksheet.addRow(["RINGKASAN (SUMMARY)"]);
+    worksheet.addRow(["Total Pemasukan", totalIncome]);
+    worksheet.addRow(["Total Pengeluaran", totalExpense]);
+    worksheet.addRow(["UNTUNG / RUGI", profitLoss]);
 
-    XLSX.utils.sheet_add_aoa(worksheet, [
-      ["RINGKASAN (SUMMARY)"],
-      ["Total Pemasukan", totalIncome],
-      ["Total Pengeluaran", totalExpense],
-      ["UNTUNG / RUGI", profitLoss]
-    ], { origin: `A${summaryStartRow}` });
+    // Formatting
+    worksheet.columns = [
+      { width: 25 },
+      { width: 20 },
+      { width: 15 },
+      { width: 15 },
+      { width: 40 }
+    ];
 
-    // Formatting widths
-    worksheet['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 40 }];
+    // Style headers
+    const headerStyle = {
+      font: { bold: true },
+      fill: { fgColor: { argb: 'FFE0E0E0' } }
+    };
 
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Keuangan");
-    XLSX.writeFile(workbook, `EZFin_Report_${user.name.split(' ')[0]}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    // Apply styles to headers
+    [4, 6 + incomes.length + 2, 6 + incomes.length + 2 + expenses.length + 2].forEach(rowNum => {
+      worksheet.getRow(rowNum).eachCell((cell) => {
+        cell.font = headerStyle.font;
+        cell.fill = headerStyle.fill;
+      });
+    });
+
+    // Generate and download file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `EZFin_Report_${user.name.split(' ')[0]}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   },
 
   toPDF: (transactions: Transaction[], user: UserProfile, periodLabel: string) => {
